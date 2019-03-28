@@ -1,0 +1,5 @@
+MAS deepRow {
+    infrastructure: Centralised
+	environment: Blackboard
+    agents: player1 player.asl;
+}
