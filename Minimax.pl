@@ -163,12 +163,12 @@ maximaHeuristica_impl([[_, HeuristicaActual]|Cdr], JugadaOptima, OptimaActual, H
 generarJugadasInmediatas(JugadaHecha, JugadasGeneradas, MisJugadas) :-
     aplicarJugada(JugadaHecha),
 	asserta(jugadaHecha(JugadaHecha)), % Para que el predicado generarJugadasInmediatas_impl pueda descartar unificaciones alternativas (es curioso que tenga que estar haciendo esto en lugar de haber usado un corte, que es más eficiente, pero por razones filosóficas no está en AS)
-    generarJugadasInmediatas_impl(JugadaHecha, 0, 0, JugadasGeneradas-[], MisJugadas),
+    generarJugadasInmediatas_impl(JugadaHecha, 0, 0, difListas(JugadasGeneradas, []), MisJugadas),
     deshacerJugada(JugadaHecha),
 	retract(jugadaHecha(JugadaHecha)).
 % Si no hay un siguiente movimiento, no se pueden generar más jugadas, y por tanto
 % las nuevas jugadas generadas se corresponden con la lista vacía
-generarJugadasInmediatas_impl(JugadaHecha, SigX, SigY, JugadasGeneradas-JugadasGeneradas, MisJugadas) :-
+generarJugadasInmediatas_impl(JugadaHecha, SigX, SigY, difListas(JugadasGeneradas, JugadasGeneradas), MisJugadas) :-
 	jugadaHecha(JugadaHecha),
     not(siguienteMovimiento(SigX, SigY, MisJugadas, _)).
 % Si hay un siguiente movimiento, entonces generar una nueva jugada con él,
@@ -177,9 +177,9 @@ generarJugadasInmediatas_impl(JugadaHecha, SigX, SigY, JugadasGeneradas, MisJuga
 	jugadaHecha(JugadaHecha),
     siguienteMovimiento(SigX, SigY, MisJugadas, movimiento(X, Y, MiMovimiento)),
     NuevoSigX is X + 1,
-    generarJugadasInmediatas_impl(JugadaHecha, NuevoSigX, Y, InicioJugadasGeneradas-FinJugadasGeneradas, MisJugadas),
+    generarJugadasInmediatas_impl(JugadaHecha, NuevoSigX, Y, difListas(InicioJugadasGeneradas, FinJugadasGeneradas), MisJugadas),
     append_simple(JugadaHecha, [movimiento(X, Y, MiMovimiento)], NuevaJugada), % No vamos a tener que iterar sobre muchas jugadas
-    append_dl([NuevaJugada|Cdr3]-Cdr3, InicioJugadasGeneradas-FinJugadasGeneradas, JugadasGeneradas).
+    append_dl(difListas([NuevaJugada|Cdr3], Cdr3), difListas(InicioJugadasGeneradas, FinJugadasGeneradas), JugadasGeneradas).
 
 % Podemos hacer un movimiento en la primera casilla libre que encontremos
 siguienteMovimiento(X, Y, MiMovimiento, movimiento(X, Y, MiMovimiento)) :-
@@ -250,7 +250,7 @@ deshacerMovimiento(movimiento(X, Y, SoyYoQuienHaceMov)) :-
 
 % Concatena dos listas expresadas como diferencias de listas.
 % Esta operación es de complejidad O(1)
-append_dl(Inicio1-Fin1, Fin1-Fin2, Inicio1-Fin2).
+append_dl(difListas(Inicio1, Fin1), difListas(Fin1, Fin2), difListas(Inicio1, Fin2)).
 
 % Concatena dos listas de manera trivial.
 % Esta operación es de complejidad O(n), pero funciona en listas cerradas
