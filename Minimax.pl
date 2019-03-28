@@ -113,15 +113,15 @@ minimax_impl(JugadaActual, [JugadaActual, Heuristica], 0, _) :- heuristica(Jugad
 % hijas
 minimax_impl(JugadaActual, [JugadaOptima, Heuristica], Profundidad, true) :- % true -> maximizar, mis jugadas
 	Profundidad > 0, % Para no unificar con lo que debe atenderse por minimax_impl(JugadaActual, [JugadaActual, Heuristica], 0, _)
-    NuevaProfundidad is Profundidad - 1,
-    generarJugadasInmediatas(JugadaActual, Jugadas, true),
-    minimaxVariasJugadas(Jugadas, JugadasYHeuristicas, NuevaProfundidad, false),
-    maximaHeuristica(JugadasYHeuristicas, JugadaOptima, Heuristica).
+	NuevaProfundidad is Profundidad - 1,
+	generarJugadasInmediatas(JugadaActual, Jugadas, true),
+	minimaxVariasJugadas(Jugadas, JugadasYHeuristicas, NuevaProfundidad, false),
+	maximaHeuristica(JugadasYHeuristicas, JugadaOptima, Heuristica).
 minimax_impl(JugadaActual, [JugadaOptima, Heuristica], Profundidad, false) :- % false -> minimizar, jugadas del oponente
 	Profundidad > 0,
-    NuevaProfundidad is Profundidad - 1,
-    generarJugadasInmediatas(JugadaActual, Jugadas, false),
-    minimaxVariasJugadas(Jugadas, JugadasYHeuristicas, NuevaProfundidad, true),
+	NuevaProfundidad is Profundidad - 1,
+	generarJugadasInmediatas(JugadaActual, Jugadas, false),
+	minimaxVariasJugadas(Jugadas, JugadasYHeuristicas, NuevaProfundidad, true),
 	minimaHeuristica(JugadasYHeuristicas, JugadaOptima, Heuristica).
 
 % Si no tenemos jugadas a las que aplicar minimax, no hacerlo (caso base)
@@ -129,8 +129,8 @@ minimaxVariasJugadas([], [], _, _).
 % Mientras queden jugadas a las que aplicar minimax, guardar los resultados de
 % minimax en una lista
 minimaxVariasJugadas([Jugada|Cdr], [[Jugada, Heuristica]|JugadasYHeuristicas], Profundidad, Maximizar) :-
-    minimax_impl(Jugada, [_, Heuristica], Profundidad, Maximizar),
-    minimaxVariasJugadas(Cdr, JugadasYHeuristicas, Profundidad, Maximizar).
+	minimax_impl(Jugada, [_, Heuristica], Profundidad, Maximizar),
+	minimaxVariasJugadas(Cdr, JugadasYHeuristicas, Profundidad, Maximizar).
 
 % Cláusula interfaz para obtener la jugada que minimiza su valor de heurística
 minimaHeuristica(JugadasYHeuristicas, JugadaOptima, HeuristicaMinima) :-
@@ -140,10 +140,10 @@ minimaHeuristica(JugadasYHeuristicas, JugadaOptima, HeuristicaMinima) :-
 minimaHeuristica_impl([], OptimaActual, OptimaActual, MinimaActual, MinimaActual).
 % Si la heurística actual es menor que la mínima actual, entonces la nueva mínima actual debería de ser la actual
 minimaHeuristica_impl([[JugadaActual, HeuristicaActual]|Cdr], JugadaOptima, _, HeuristicaMinima, MinimaActual) :- HeuristicaActual < MinimaActual,
-                                                                                                                  minimaHeuristica_impl(Cdr, JugadaOptima, JugadaActual, HeuristicaMinima, HeuristicaActual).
+																												  minimaHeuristica_impl(Cdr, JugadaOptima, JugadaActual, HeuristicaMinima, HeuristicaActual).
 % Si la heurística actual es mayor o igual que la mínima actual, entonces la nueva mínima actual debe de seguir como está
 minimaHeuristica_impl([[_, HeuristicaActual]|Cdr], JugadaOptima, OptimaActual, HeuristicaMinima, MinimaActual) :- HeuristicaActual >= MinimaActual,
-                                                                                                                  minimaHeuristica_impl(Cdr, JugadaOptima, OptimaActual, HeuristicaMinima, MinimaActual).
+																												  minimaHeuristica_impl(Cdr, JugadaOptima, OptimaActual, HeuristicaMinima, MinimaActual).
 
 % Cláusula interfaz para obtener la jugada que maximiza su valor de heurística
 maximaHeuristica(JugadasYHeuristicas, JugadaOptima, HeuristicaMaxima) :-
@@ -153,100 +153,100 @@ maximaHeuristica(JugadasYHeuristicas, JugadaOptima, HeuristicaMaxima) :-
 maximaHeuristica_impl([], OptimaActual, OptimaActual, MaximaActual, MaximaActual).
 % Si la heurística actual es mayor que la máxima actual, entonces la nueva máxima actual debería de ser la actual
 maximaHeuristica_impl([[JugadaActual, HeuristicaActual]|Cdr], JugadaOptima, _, HeuristicaMaxima, MaximaActual) :- HeuristicaActual > MaximaActual,
-                                                                                                                  maximaHeuristica_impl(Cdr, JugadaOptima, JugadaActual, HeuristicaMaxima, HeuristicaActual).
+																												  maximaHeuristica_impl(Cdr, JugadaOptima, JugadaActual, HeuristicaMaxima, HeuristicaActual).
 % Si la heurística actual es menor o igual que la máxima actual, entonces la nueva máxima actual debe de seguir como está
 maximaHeuristica_impl([[_, HeuristicaActual]|Cdr], JugadaOptima, OptimaActual, HeuristicaMaxima, MaximaActual) :- MaximaActual >= HeuristicaActual,
-                                                                                                                  maximaHeuristica_impl(Cdr, JugadaOptima, OptimaActual, HeuristicaMaxima, MaximaActual).
+																												  maximaHeuristica_impl(Cdr, JugadaOptima, OptimaActual, HeuristicaMaxima, MaximaActual).
 
 % Cláusula interfaz para generar las jugadas inmediatas a partir de una jugada que
 % se considera ya hecha (aunque realmente no sea así)
 generarJugadasInmediatas(JugadaHecha, JugadasGeneradas, MisJugadas) :-
-    aplicarJugada(JugadaHecha),
+	aplicarJugada(JugadaHecha),
 	asserta(jugadaHecha(JugadaHecha)), % Para que el predicado generarJugadasInmediatas_impl pueda descartar unificaciones alternativas (es curioso que tenga que estar haciendo esto en lugar de haber usado un corte, que es más eficiente, pero por razones filosóficas no está en AS)
-    generarJugadasInmediatas_impl(JugadaHecha, 0, 0, difListas(JugadasGeneradas, []), MisJugadas),
-    deshacerJugada(JugadaHecha),
+	generarJugadasInmediatas_impl(JugadaHecha, 0, 0, difListas(JugadasGeneradas, []), MisJugadas),
+	deshacerJugada(JugadaHecha),
 	retract(jugadaHecha(JugadaHecha)).
 % Si no hay un siguiente movimiento, no se pueden generar más jugadas, y por tanto
 % las nuevas jugadas generadas se corresponden con la lista vacía
 generarJugadasInmediatas_impl(JugadaHecha, SigX, SigY, difListas(JugadasGeneradas, JugadasGeneradas), MisJugadas) :-
 	jugadaHecha(JugadaHecha),
-    not(siguienteMovimiento(SigX, SigY, MisJugadas, _)).
+	not(siguienteMovimiento(SigX, SigY, MisJugadas, _)).
 % Si hay un siguiente movimiento, entonces generar una nueva jugada con él,
 % y añadirla a la lista
 generarJugadasInmediatas_impl(JugadaHecha, SigX, SigY, JugadasGeneradas, MisJugadas) :-
 	jugadaHecha(JugadaHecha),
-    siguienteMovimiento(SigX, SigY, MisJugadas, movimiento(X, Y, MiMovimiento)),
-    NuevoSigX is X + 1,
-    generarJugadasInmediatas_impl(JugadaHecha, NuevoSigX, Y, difListas(InicioJugadasGeneradas, FinJugadasGeneradas), MisJugadas),
-    append_simple(JugadaHecha, [movimiento(X, Y, MiMovimiento)], NuevaJugada), % No vamos a tener que iterar sobre muchas jugadas
-    append_dl(difListas([NuevaJugada|Cdr3], Cdr3), difListas(InicioJugadasGeneradas, FinJugadasGeneradas), JugadasGeneradas).
+	siguienteMovimiento(SigX, SigY, MisJugadas, movimiento(X, Y, MiMovimiento)),
+	NuevoSigX is X + 1,
+	generarJugadasInmediatas_impl(JugadaHecha, NuevoSigX, Y, difListas(InicioJugadasGeneradas, FinJugadasGeneradas), MisJugadas),
+	append_simple(JugadaHecha, [movimiento(X, Y, MiMovimiento)], NuevaJugada), % No vamos a tener que iterar sobre muchas jugadas
+	append_dl(difListas([NuevaJugada|Cdr3], Cdr3), difListas(InicioJugadasGeneradas, FinJugadasGeneradas), JugadasGeneradas).
 
 % Podemos hacer un movimiento en la primera casilla libre que encontremos
 siguienteMovimiento(X, Y, MiMovimiento, movimiento(X, Y, MiMovimiento)) :-
-    anchoTablero(Ancho), altoTablero(Alto),
-    X < Ancho, Y < Alto,
-    tablero(X, Y, Id), Id = 0.
+	anchoTablero(Ancho), altoTablero(Alto),
+	X < Ancho, Y < Alto,
+	tablero(X, Y, Id), Id = 0.
 % Si la casilla actual no está libre, analizar la siguiente en la coordenada X
 siguienteMovimiento(X, Y, MiMovimiento, SigMovimiento) :-
-    anchoTablero(Ancho), altoTablero(Alto),
-    AnchoComp is Ancho - 1,
-    X < AnchoComp, Y < Alto,
-    XSig is X + 1,
-    tablero(XSig, Y, Id), Id \= 0,
-    siguienteMovimiento(XSig, Y, MiMovimiento, SigMovimiento).
+	anchoTablero(Ancho), altoTablero(Alto),
+	AnchoComp is Ancho - 1,
+	X < AnchoComp, Y < Alto,
+	XSig is X + 1,
+	tablero(XSig, Y, Id), Id \= 0,
+	siguienteMovimiento(XSig, Y, MiMovimiento, SigMovimiento).
 % Si la casilla actual no está libre, pero la siguiente en X sí, esa siguiente es
 % nuestro siguiente movimiento
 siguienteMovimiento(X, Y, MiMovimiento, movimiento(XSig, Y, MiMovimiento)) :-
-    anchoTablero(Ancho), altoTablero(Alto),
-    AnchoComp is Ancho - 1,
-    X < AnchoComp, Y < Alto,
-    XSig is X + 1,
-    tablero(XSig, Y, Id), Id = 0.
+	anchoTablero(Ancho), altoTablero(Alto),
+	AnchoComp is Ancho - 1,
+	X < AnchoComp, Y < Alto,
+	XSig is X + 1,
+	tablero(XSig, Y, Id), Id = 0.
 % Si la casilla actual no está libre, analizar la siguiente en la coordenada Y,
 % porque ya hemos agotado todas las coordenadas X de la Y anterior
 siguienteMovimiento(X, Y, MiMovimiento, SigMovimiento) :-
-    anchoTablero(Ancho), altoTablero(Alto),
-    AltoComp is Alto - 1,
-    X == Ancho, Y < AltoComp,
-    XSig is 0,
-    YSig is Y + 1,
-    tablero(XSig, YSig, Id), Id \= 0,
-    siguienteMovimiento(XSig, YSig, MiMovimiento, SigMovimiento).
+	anchoTablero(Ancho), altoTablero(Alto),
+	AltoComp is Alto - 1,
+	X == Ancho, Y < AltoComp,
+	XSig is 0,
+	YSig is Y + 1,
+	tablero(XSig, YSig, Id), Id \= 0,
+	siguienteMovimiento(XSig, YSig, MiMovimiento, SigMovimiento).
 % Si no hemos analizado la casilla siguiente a la actual que se desborda en X,
 % y está libre, esta es la jugada que buscamos
 siguienteMovimiento(X, Y, MiMovimiento, movimiento(XSig, YSig, MiMovimiento)) :-
-    anchoTablero(Ancho), altoTablero(Alto),
-    AltoComp is Alto - 1,
-    X == Ancho, Y < AltoComp,
-    XSig is 0,
-    YSig is Y + 1,
-    tablero(XSig, YSig, Id), Id = 0.
+	anchoTablero(Ancho), altoTablero(Alto),
+	AltoComp is Alto - 1,
+	X == Ancho, Y < AltoComp,
+	XSig is 0,
+	YSig is Y + 1,
+	tablero(XSig, YSig, Id), Id = 0.
 
 % Sin jugada que aplicar, no hacer nada (caso base)
 aplicarJugada([]).
 % Aplicar cada uno de los movimientos
 aplicarJugada([Movimiento|Cdr]) :-
-    aplicarMovimiento(Movimiento),
-    aplicarJugada(Cdr).
+	aplicarMovimiento(Movimiento),
+	aplicarJugada(Cdr).
 
 % Simula un movimiento en el tablero
 aplicarMovimiento(movimiento(X, Y, SoyYoQuienHaceMov)) :-
-    soyYoAIdentificadorJugador(SoyYoQuienHaceMov, Id),
-    retract(tablero(X, Y, 0)), % abolish en Jason
-    asserta(tablero(X, Y, Id)).
+	soyYoAIdentificadorJugador(SoyYoQuienHaceMov, Id),
+	retract(tablero(X, Y, 0)), % abolish en Jason
+	asserta(tablero(X, Y, Id)).
 
 % Sin jugada que deshacer, no hacer nada (caso base)
 deshacerJugada([]).
 % Deshacer cada uno de los movimientos
 deshacerJugada([Movimiento|Cdr]) :-
-    deshacerMovimiento(Movimiento),
-    deshacerJugada(Cdr).
+	deshacerMovimiento(Movimiento),
+	deshacerJugada(Cdr).
 
 % Deshace la simulación de un movimiento en el tablero
 deshacerMovimiento(movimiento(X, Y, SoyYoQuienHaceMov)) :-
-    soyYoAIdentificadorJugador(SoyYoQuienHaceMov, Id),
-    retract(tablero(X, Y, Id)), % abolish en Jason
-    asserta(tablero(X, Y, 0)).
+	soyYoAIdentificadorJugador(SoyYoQuienHaceMov, Id),
+	retract(tablero(X, Y, Id)), % abolish en Jason
+	asserta(tablero(X, Y, 0)).
 
 % Concatena dos listas expresadas como diferencias de listas.
 % Esta operación es de complejidad O(1)
