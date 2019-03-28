@@ -269,12 +269,6 @@ valorMaximo(A, B, A) :- A < B.
 % TODO: la implementación final real de este predicado
 heuristica(_, R) :- random(1, 6, R).
 
+% FIXME: predicados de prueba
 soyYoAIdentificadorJugador(true, 1).
 soyYoAIdentificadorJugador(false, 2).
-
-% En Jason:
-% soyYoAIdentificadorJugador(true, Id) :-
-%     .my_name(Yo) &
-%     .delete("player", Yo, IdStr) &
-%     .term2string(Id, IdStr). // Para convertir la representación textual de Id a tipo numérico
-% soyYoAIdentificadorJugador(false, 1 + (MiId mod 2)) :- soyYoAIdentificadorJugador(true, MiId).
