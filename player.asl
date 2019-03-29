@@ -1,66 +1,227 @@
-// Agente player en proyecto Practica2.mas2j
+// Agente player en proyecto DeepRow.mas2j
 
 /* Creencias y reglas iniciales */
-/*asignacion(X, Y, G, P, C==0) :- asignacion(X, Y, G, P, C==0) & asignacion(X, Y, G, P, C==0) & asignacion(X, Y, G, P, C==0) & asignacion(X, Y, G, P, C==0) & asignacion(X, Y, G, P, C==0) &asignacion(X, Y, G, P, C==0) &asignacion(X, Y, G, P, C==0) &asignacion(X, Y, G, P, C==0).  
-asignacion(X, Y, G, P, C==1, Dir) :-  
-asignacion(X, Y, G, P, C==2, Dir) :- */
-estalibre(X,Y) :- tablero(X,Y,Jugador) & Jugador = 0.
-esmio(X,Y) :- tablero(X,Y,Jugador) & Jugador = .myname.
-noesmio(X,Y) :- tablero(X,Y,Jugador) & Jugador \= .myname.
-mepertenece(X,Y,Jugando):- tablero(X,Y,Jugador) & Jugando=Jugador.
-ganadora(X,Y,Jugador) :- ganadora2(X,Y,Jugador,L = [0 | 1]) |ganadora2(X,Y,Jugador,L = [1 | 0]) |ganadora2(X,Y,Jugador,L = [1 | 1]) |ganadora2(X,Y,Jugador,L = [-1 | 1]) |ganadora2(X,Y,Jugador,L = [1 | -1])|ganadora2(X,Y,Jugador,L = [-1 | 0])|ganadora2(X,Y,Jugador,L = [0 | -1]) |ganadora2(X,Y,Jugador,L = [-1 | -1])
-ganadora2(X,Y,Jugador,L = [d1 | d2 ]):- mepertenece(X + d1, Y +d2,Jugador)& mepertenece(X + d1*2, Y+ d2*2, Jugador)& mepertenece (X+d1*3, Y + d2*3,Jugador).
-tier0(X,Y,Jugador):- tier0part2(X,Y,Jugador,L = [0 | 1]) |tier0part2(X,Y,Jugador,L = [1 | 0]) |tier0part2(X,Y,Jugador,L = [1 | 1]) |tier0part2(X,Y,Jugador,L = [-1 | 1]) |tier0part2(X,Y,Jugador,L = [1 | -1])|tier0part2(X,Y,Jugador,L = [-1 | 0])|tier0part2(X,Y,Jugador,L = [0 | -1]) |tier0part2(X,Y,Jugador,L = [-1 | -1])
-tier0part2(X,Y,Jugando,L = [d1 | d2 ]) :-  mepertenece(X + d1, Y +d2,Jugador).
-tier1(X,Y,Jugador):- tier1part2(X,Y,Jugador,L = [0 | 1]) |tier1part2(X,Y,Jugador,L = [1 | 0]) |tier1part2(X,Y,Jugador,L = [1 | 1]) |tier1part2(X,Y,Jugador,L = [-1 | 1]) |tier1part2(X,Y,Jugador,L = [1 | -1])|tier1part2(X,Y,Jugador,L = [-1 | 0])|tier1part2(X,Y,Jugador,L = [0 | -1]) |tier1part2(X,Y,Jugador,L = [-1 | -1])
-tier1part2(X,Y,Jugando,L = [d1 | d2 ]) :-  mepertenece(X + d1, Y +d2,Jugador) & mepertenece(X + d1*2, Y + d2*2,Jugador).
+// La profundidad máxima del árbol de juego a considerar. Afecta a la
+// corrección y tiempo de ejecución del algoritmo: más profundidad aumenta
+// la calidad de las jugadas, a costa de mayor tiempo de ejecución y cosumo de
+// memoria
+profundidadArbolJuego(2). // En SWI-Prolog, estas mismas reglas permiten llegar a 3 niveles de profundidad en un tiempo similar.
+                          // Jason es menos eficiente, y no tiene corte para ayudar ;-(
+
+// Las dimensiones del tablero
+anchoTablero(8).
+altoTablero(8).
+
+// El valor devuelto por la heurística para señalar una victoria. Es el valor
+// máximo posible que puede tomar la heurística
+heuristicaVictoria(999999).
+// El valor devuelto por la heurística para señalar una derrota. Es el valor
+// mínimo posible que puede tomar la heurística
+heuristicaDerrota(-999999).
+
+// Cláusulas interfaz para obtener la casilla donde colocar una ficha para maximizar
+// nuestra victoria o la del contrincante
+mejorSiguienteCasilla(X, Y) :- minimax([[movimiento(X, Y, _)], _]).
+peorSiguienteCasilla(X, Y) :- maximin([[movimiento(X, Y, _)], _]).
+
+// Cláusula interfaz para obtener la jugada óptima a realizar, con su heurística asociada
+minimax(JugadaYHeuristica) :-
+	profundidadArbolJuego(P) &
+	minimax_impl([], JugadaYHeuristica, P, true) &
+	borrar_generarJugadasInmediatas_cacheado. // Borra datos en caché para partir de un estado limpio
+// Cláusula interfaz para obtener la jugada óptima a realizar para perder el juego, con su heurística asociada
+maximin(JugadaYHeuristica) :-
+	profundidadArbolJuego(P) &
+	minimax_impl([], JugadaYHeuristica, P, false) &
+	borrar_generarJugadasInmediatas_cacheado. // Borra datos en caché para partir de un estado limpio
+// Si la profundidad restante es cero, no generar hijos para este nodo,
+// y considerar la heurística del nodo como la heurística de la jugada que representa
+// (caso base)
+minimax_impl(JugadaActual, [JugadaActual, Heuristica], 0, _) :- heuristica(JugadaActual, Heuristica).
+// Si la profundidad restante no es cero, generar hijos para este nodo del árbol
+// y considerar la heurística del nodo como la heurística máxima o mínima de las jugadas
+// hijas
+minimax_impl(JugadaActual, [JugadaOptima, Heuristica], Profundidad, true) :- // true -> maximizar, mis jugadas
+	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, true) & // Para reducir el tiempo de ejecución por el backtracking
+	Jugadas \== [] &
+	Profundidad > 0 & // Para no unificar con lo que debe atenderse por minimax_impl(JugadaActual, [JugadaActual, Heuristica], 0, _)
+	minimaxVariasJugadas(Jugadas, JugadasYHeuristicas, Profundidad - 1, false) &
+	maximaHeuristica(JugadasYHeuristicas, JugadaOptima, Heuristica).
+// Los nodos sin más jugadas posibles son terminales, y si heurística se calcula directamente
+minimax_impl(JugadaActual, [JugadaActual, Heuristica], _, true) :- // true -> maximizar, mis jugadas
+	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, true) & // Para reducir el tiempo de ejecución por el backtracking
+	Jugadas = [] &
+	heuristica(JugadaActual, Heuristica).
+minimax_impl(JugadaActual, [JugadaOptima, Heuristica], Profundidad, false) :- // false -> minimizar, jugadas del oponente
+	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, false) & // Para reducir el tiempo de ejecución por el backtracking
+	Jugadas \== [] &
+	Profundidad > 0 &
+	minimaxVariasJugadas(Jugadas, JugadasYHeuristicas, Profundidad - 1, true) &
+	minimaHeuristica(JugadasYHeuristicas, JugadaOptima, Heuristica).
+// Los nodos sin más jugadas posibles son terminales, y si heurística se calcula directamente
+minimax_impl(JugadaActual, [JugadaActual, Heuristica], _, false) :- // false -> minimizar, jugadas del oponente
+	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, false) & // Para reducir el tiempo de ejecución por el backtracking
+	Jugadas = [] &
+	heuristica(JugadaActual, Heuristica).
+
+// Si no hemos computado ya el resultado de generarJugadasInmediatas sobre los argumentos dados, hacerlo y guardarlo para reusarlo
+generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas) :-
+	not generarJugadasInmediatas_(JugadaActual, Jugadas, MisJugadas) &
+	generarJugadasInmediatas(JugadaActual, Jugadas, MisJugadas) &
+	.assertz(generarJugadasInmediatas_(JugadaActual, Jugadas, MisJugadas)).
+// Si ya tenemos el resultado en caché, sacarlo directamente de ahí, para no tener que volver a repetir los cálculos
+generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas) :- generarJugadasInmediatas_(JugadaActual, Jugadas, MisJugadas).
+// Eliminar datos guardados en caché que pudieran quedar
+borrar_generarJugadasInmediatas_cacheado :- .abolish(generarJugadasInmediatas_(_, _, _)).
+
+// Si no tenemos jugadas a las que aplicar minimax, no hacerlo (caso base)
+minimaxVariasJugadas([], [], _, _).
+// Mientras queden jugadas a las que aplicar minimax, guardar los resultados de
+// minimax en una lista
+minimaxVariasJugadas([Jugada|Cdr], [[Jugada, Heuristica]|JugadasYHeuristicas], Profundidad, Maximizar) :-
+	minimax_impl(Jugada, [_, Heuristica], Profundidad, Maximizar) &
+	minimaxVariasJugadas(Cdr, JugadasYHeuristicas, Profundidad, Maximizar).
+
+// Cláusula interfaz para obtener la jugada que minimiza su valor de heurística
+minimaHeuristica(JugadasYHeuristicas, JugadaOptima, HeuristicaMinima) :-
+	heuristicaVictoria(HeuristicaVictoria) &
+	minimaHeuristica_impl(JugadasYHeuristicas, JugadaOptima, _, HeuristicaMinima, HeuristicaVictoria).
+// Si no hay más hijos que recorrer, la heurística mínima final es la actual
+minimaHeuristica_impl([], OptimaActual, OptimaActual, MinimaActual, MinimaActual).
+// Si la heurística actual es menor que la mínima actual, entonces la nueva mínima actual debería de ser la actual
+minimaHeuristica_impl([[JugadaActual, HeuristicaActual]|Cdr], JugadaOptima, _, HeuristicaMinima, MinimaActual) :- HeuristicaActual < MinimaActual &
+																												  minimaHeuristica_impl(Cdr, JugadaOptima, JugadaActual, HeuristicaMinima, HeuristicaActual).
+// Si la heurística actual es mayor o igual que la mínima actual, entonces la nueva mínima actual debe de seguir como está
+minimaHeuristica_impl([[_, HeuristicaActual]|Cdr], JugadaOptima, OptimaActual, HeuristicaMinima, MinimaActual) :- HeuristicaActual >= MinimaActual &
+																												  minimaHeuristica_impl(Cdr, JugadaOptima, OptimaActual, HeuristicaMinima, MinimaActual).
+
+// Cláusula interfaz para obtener la jugada que maximiza su valor de heurística
+maximaHeuristica(JugadasYHeuristicas, JugadaOptima, HeuristicaMaxima) :-
+	heuristicaDerrota(HeuristicaDerrota) &
+	maximaHeuristica_impl(JugadasYHeuristicas, JugadaOptima, _, HeuristicaMaxima, HeuristicaDerrota).
+// Si no hay más hijos que recorrer, la heurística máxima es la actual
+maximaHeuristica_impl([], OptimaActual, OptimaActual, MaximaActual, MaximaActual).
+// Si la heurística actual es mayor que la máxima actual, entonces la nueva máxima actual debería de ser la actual
+maximaHeuristica_impl([[JugadaActual, HeuristicaActual]|Cdr], JugadaOptima, _, HeuristicaMaxima, MaximaActual) :- HeuristicaActual > MaximaActual &
+																												  maximaHeuristica_impl(Cdr, JugadaOptima, JugadaActual, HeuristicaMaxima, HeuristicaActual).
+// Si la heurística actual es menor o igual que la máxima actual, entonces la nueva máxima actual debe de seguir como está
+maximaHeuristica_impl([[_, HeuristicaActual]|Cdr], JugadaOptima, OptimaActual, HeuristicaMaxima, MaximaActual) :- MaximaActual >= HeuristicaActual &
+																												  maximaHeuristica_impl(Cdr, JugadaOptima, OptimaActual, HeuristicaMaxima, MaximaActual).
+
+// Cláusula interfaz para generar las jugadas inmediatas a partir de una jugada que
+// se considera ya hecha (aunque realmente no sea así)
+generarJugadasInmediatas(JugadaHecha, JugadasGeneradas, MisJugadas) :-
+	aplicarJugada(JugadaHecha) &
+	.asserta(jugadaHecha(JugadaHecha)) & // Para que el predicado generarJugadasInmediatas_impl pueda descartar unificaciones alternativas (es curioso que tenga que estar haciendo esto en lugar de haber usado un corte, que es más eficiente, pero por razones filosóficas no está en AS)
+	generarJugadasInmediatas_impl(JugadaHecha, 0, 0, difListas(JugadasGeneradas, []), MisJugadas) &
+	deshacerJugada(JugadaHecha) &
+	.abolish(jugadaHecha(JugadaHecha)).
+// Si no hay un siguiente movimiento, no se pueden generar más jugadas, y por tanto
+// las nuevas jugadas generadas se corresponden con la lista vacía
+generarJugadasInmediatas_impl(JugadaHecha, SigX, SigY, difListas(JugadasGeneradas, JugadasGeneradas), MisJugadas) :-
+	jugadaHecha(JugadaHecha) &
+	not siguienteMovimiento(SigX, SigY, MisJugadas, _).
+// Si hay un siguiente movimiento, entonces generar una nueva jugada con él,
+// y añadirla a la lista
+generarJugadasInmediatas_impl(JugadaHecha, SigX, SigY, JugadasGeneradas, MisJugadas) :-
+	jugadaHecha(JugadaHecha) &
+	siguienteMovimiento(SigX, SigY, MisJugadas, movimiento(X, Y, MiMovimiento)) &
+	generarJugadasInmediatas_impl(JugadaHecha, X + 1, Y, difListas(InicioJugadasGeneradas, FinJugadasGeneradas), MisJugadas) &
+	append_simple(JugadaHecha, [movimiento(X, Y, MiMovimiento)], NuevaJugada) & // No vamos a tener que iterar sobre muchas jugadas
+	append_dl(difListas([NuevaJugada|Cdr3], Cdr3), difListas(InicioJugadasGeneradas, FinJugadasGeneradas), JugadasGeneradas).
+
+// Podemos hacer un movimiento en la primera casilla libre que encontremos
+siguienteMovimiento(X, Y, MiMovimiento, movimiento(X, Y, MiMovimiento)) :-
+	anchoTablero(Ancho) & altoTablero(Alto) &
+	X < Ancho & Y < Alto &
+	tablero(X, Y, Id) & Id = 0.
+// Si la casilla actual no está libre, analizar la siguiente en la coordenada X
+siguienteMovimiento(X, Y, MiMovimiento, SigMovimiento) :-
+	anchoTablero(Ancho) & altoTablero(Alto) &
+	X < Ancho & Y < Alto &
+	tablero(X, Y, Id) & Id \== 0 &
+	siguienteMovimiento(X + 1, Y, MiMovimiento, SigMovimiento).
+// Si la casilla actual está desbordada en X, analizar la siguiente en la coordenada Y,
+// porque ya hemos agotado todas las coordenadas X de la Y anterior
+siguienteMovimiento(X, Y, MiMovimiento, SigMovimiento) :-
+	anchoTablero(Ancho) & altoTablero(Alto) &
+	X == Ancho & Y < (Alto - 1) &
+	siguienteMovimiento(0, Y + 1, MiMovimiento, SigMovimiento).
+
+// Sin jugada que aplicar, no hacer nada (caso base)
+aplicarJugada([]).
+// Aplicar cada uno de los movimientos
+aplicarJugada([Movimiento|Cdr]) :-
+	aplicarMovimiento(Movimiento) &
+	aplicarJugada(Cdr).
+
+// Simula un movimiento en el tablero
+aplicarMovimiento(movimiento(X, Y, SoyYoQuienHaceMov)) :-
+	soyYoAIdentificadorJugador(SoyYoQuienHaceMov, Id) &
+	.abolish(tablero(X, Y, 0)[source(percept)]) &
+	.asserta(tablero(X, Y, Id)[source(percept)]).
+
+// Sin jugada que deshacer, no hacer nada (caso base)
+deshacerJugada([]).
+// Deshacer cada uno de los movimientos
+deshacerJugada([Movimiento|Cdr]) :-
+	deshacerMovimiento(Movimiento) &
+	deshacerJugada(Cdr).
+
+// Deshace la simulación de un movimiento en el tablero
+deshacerMovimiento(movimiento(X, Y, SoyYoQuienHaceMov)) :-
+	soyYoAIdentificadorJugador(SoyYoQuienHaceMov, Id) &
+	.abolish(tablero(X, Y, Id)[source(percept)]) &
+	.asserta(tablero(X, Y, 0)[source(percept)]).
+
+// Concatena dos listas expresadas como diferencias de listas.
+// Esta operación es de complejidad O(1)
+append_dl(difListas(Inicio1, Fin1), difListas(Fin1, Fin2), difListas(Inicio1, Fin2)).
+
+// Concatena dos listas de manera trivial.
+// Esta operación es de complejidad O(n), pero funciona en listas cerradas
+append_simple([], L, L).
+append_simple([Car|Cdr], L, [Car|R]) :- append_simple(Cdr, L, R).
+
+// Obtiene el valor mínimo de dos variables
+valorMinimo(A, B, A) :- A < B.
+valorMinimo(A, B, B) :- A >= B.
+
+// Obtiene el valor máximo de dos variables
+valorMaximo(A, B, B) :- B >= A.
+valorMaximo(A, B, A) :- A < B.
+
+// Predicado que obtiene la puntuación heurística de una jugada
+// TODO: la implementación final real de este predicado
+heuristica(_, math.floor(-1000 + R * 2000)) :- .random(R).
+
+soyYoAIdentificadorJugador(true, Id) :-
+	.my_name(Yo) &
+	.delete("player", Yo, IdStr) &
+	.term2string(Id, IdStr).
+soyYoAIdentificadorJugador(false, 1 + (MiId mod 2)) :- soyYoAIdentificadorJugador(true, MiId).
+
 /* Objetivos iniciales */
 
 /* Planes */
 
 /* Eventos de BC */
-+tablero(X, Y, Jugador)[source(percept)] : X >= 0 & X <= 7 & Y >= 0 & Y <= 7 & (Jugador = 0 | Jugador = 1 | Jugador = 2) <-
-	.print(X, ", ", Y, ", ", Jugador).
-+tablero(X, Y, Jugador)[source(Agente)] <- -tablero(X, Y, Jugador)[source(Agente)]. // Descartar información recibida irrelevante
-
-+estrategia(Estrategia)[source(percept)] : Estrategia = jugarAGanar | Estrategia = jugarAPerder <-
-	.wait(95);
-	.print(Estrategia).
-+estrategia(Estrategia)[source(Agente)] <- -estrategia(Estrategia)[source(Agente)]. // Descartar información recibida irrelevante
++estrategia(Estrategia)[source(percept)] : Estrategia = jugarAGanar | Estrategia = jugarAPerder.
++estrategia(Estrategia)[source(percept)] <- -estrategia(Estrategia)[source(percept)].
 
 +turno(Yo)[source(percept)] : .my_name(Yo) <-
-	.wait(100); // Por si estamos recibiendo todavía percepciones del tablero
-	.print(Yo).
-	
-+turno(Otro)[source(Agente)] <- -turno(Otro)[source(Agente)].// Descartar información recibida irrelevante
-+!mainh(L,Valortotal){
-	Valortotal=0.
-	aplicarJugada(L).
-	for(.member(movimiento(X,Y,Jugando),L){
-	!heuristica(movimiento(X,Y,Jugando)Valorjugada);
-	Valortotal=Valortotal+Valorjugada.
-	}
-	deshacerJugada(L).
-}
-+!heuristica(tablero(X,Y,Jugando), Valorjugada)<-
-	Valorjugada=0.
-	if(estalibre(X,Y){
-		if(ganadora(X,Y,Jugando){
-		Valorjugada=Valorjugada+100000;
-		}elif(ganadora(X,Y,otrojugador){
-		Valorjugada=Valorjugada+100000;
-		}else{
-		!tiercalculator(X,Y,Jugando,Valorjugada).
-		}
-	}
-+!tiercalculator(X,Y,Jugando,Valorjugada)
-		if(tier0(X,Y,otrojugador){
-		Valorjugada=Valorjugada+1;
-		}elif(tier1(X,Y,otorjugador){
-		Valorjugada=Valorjugada+3;
-		}
-		if(tier0(X,Y,Jugando){
-		Valorjugada=Valorjugada+2;
-		}elif(tier1(X,Y,Jugando){
-		Valorjugada=Valorjugada+4.
-		}
+	.wait(1000); // Por si estamos recibiendo todavía percepciones del tablero
+
+	?estrategia(Est);
+	if (Est = jugarAGanar) {
+		?mejorSiguienteCasilla(X, Y);
+	} else {
+		?peorSiguienteCasilla(X, Y);
+	};
+
+	// Realizar el movimiento
+	put(X, Y).
+
+// Descartar comunicaciones que lleguen de otros agentes, pues solo nos interesa
+// lo que diga el entorno
++!kqml_received(Agente, _, _, _) : .my_name(Yo) & Agente \== Yo.
