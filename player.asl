@@ -3,7 +3,7 @@
 /* Creencias y reglas iniciales */
 // La profundidad máxima del árbol de juego a considerar. Afecta a la
 // corrección y tiempo de ejecución del algoritmo: más profundidad aumenta
-// la calidad de las jugadas, a costa de mayor tiempo de ejecución y cosumo de
+// la calidad de las jugadas, a costa de mayor tiempo de ejecución y consumo de
 // memoria
 profundidadArbolJuego(2). // En SWI-Prolog, estas mismas reglas permiten llegar a 3 niveles de profundidad en un tiempo similar.
                           // Jason es menos eficiente, y no tiene corte para ayudar ;-(
@@ -209,6 +209,7 @@ soyYoAIdentificadorJugador(false, 1 + (MiId mod 2)) :- soyYoAIdentificadorJugado
 +estrategia(Estrategia)[source(percept)] : Estrategia = jugarAGanar | Estrategia = jugarAPerder.
 +estrategia(Estrategia)[source(percept)] <- -estrategia(Estrategia)[source(percept)].
 
+// Al ser nuestro turno según el entorno, hacer el mejor movimiento
 +turno(Yo)[source(percept)] : .my_name(Yo) <-
 	.wait(1000); // Por si estamos recibiendo todavía percepciones del tablero
 

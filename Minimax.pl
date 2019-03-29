@@ -7,7 +7,7 @@
 
 % La profundidad máxima del árbol de juego a considerar. Afecta a la
 % corrección y tiempo de ejecución del algoritmo: más profundidad aumenta
-% la calidad de las jugadas, a costa de mayor tiempo de ejecución y cosumo de
+% la calidad de las jugadas, a costa de mayor tiempo de ejecución y consumo de
 % memoria
 profundidadArbolJuego(3).
 
@@ -261,14 +261,6 @@ append_dl(difListas(Inicio1, Fin1), difListas(Fin1, Fin2), difListas(Inicio1, Fi
 % Esta operación es de complejidad O(n), pero funciona en listas cerradas
 append_simple([], L, L).
 append_simple([Car|Cdr], L, [Car|R]) :- append_simple(Cdr, L, R).
-
-% Obtiene el valor mínimo de dos variables
-valorMinimo(A, B, A) :- A < B.
-valorMinimo(A, B, B) :- A >= B.
-
-% Obtiene el valor máximo de dos variables
-valorMaximo(A, B, B) :- B >= A.
-valorMaximo(A, B, A) :- A < B.
 
 % Predicado que obtiene la puntuación heurística de una jugada
 % TODO: la implementación final real de este predicado
