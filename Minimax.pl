@@ -25,6 +25,7 @@ heuristicaDerrota(-999999).
 % El estado actual del tablero. Se asume que el estado es completo
 % y consistente
 :- dynamic tablero/3.
+:- dynamic antiguoTablero/3.
 tablero(0, 0, 0).
 tablero(0, 1, 0).
 tablero(0, 2, 0).
@@ -98,13 +99,11 @@ peorSiguienteCasilla(X, Y) :- maximin([[movimiento(X, Y, _)], _]).
 % Cláusula interfaz para obtener la jugada óptima a realizar, con su heurística asociada
 minimax(JugadaYHeuristica) :-
 	profundidadArbolJuego(P),
-	minimax_impl([], JugadaYHeuristica, P, true),
-	borrar_generarJugadasInmediatas_cacheado. % Borra datos en caché para partir de un estado limpio
+	minimax_impl([], JugadaYHeuristica, P, true).
 % Cláusula interfaz para obtener la jugada óptima a realizar para perder el juego, con su heurística asociada
 maximin(JugadaYHeuristica) :-
 	profundidadArbolJuego(P),
-	minimax_impl([], JugadaYHeuristica, P, false),
-	borrar_generarJugadasInmediatas_cacheado. % Borra datos en caché para partir de un estado limpio
+	minimax_impl([], JugadaYHeuristica, P, false).
 % Si la profundidad restante es cero, no generar hijos para este nodo,
 % y considerar la heurística del nodo como la heurística de la jugada que representa
 % (caso base)
@@ -113,40 +112,17 @@ minimax_impl(JugadaActual, [JugadaActual, Heuristica], 0, _) :- heuristica(Jugad
 % y considerar la heurística del nodo como la heurística máxima o mínima de las jugadas
 % hijas
 minimax_impl(JugadaActual, [JugadaOptima, Heuristica], Profundidad, true) :- % true -> maximizar, mis jugadas
-	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, true), % Para reducir el tiempo de ejecución por el backtracking
-	Jugadas \= [],
 	Profundidad > 0, % Para no unificar con lo que debe atenderse por minimax_impl(JugadaActual, [JugadaActual, Heuristica], 0, _)
 	NuevaProfundidad is Profundidad - 1,
+	generarJugadasInmediatas(JugadaActual, Jugadas, true),
 	minimaxVariasJugadas(Jugadas, JugadasYHeuristicas, NuevaProfundidad, false),
 	maximaHeuristica(JugadasYHeuristicas, JugadaOptima, Heuristica).
-% Los nodos sin más jugadas posibles son terminales, y si heurística se calcula directamente
-minimax_impl(JugadaActual, [JugadaActual, Heuristica], _, true) :- % true -> maximizar, mis jugadas
-	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, true), % Para reducir el tiempo de ejecución por el backtracking
-	Jugadas = [],
-	heuristica(JugadaActual, Heuristica).
 minimax_impl(JugadaActual, [JugadaOptima, Heuristica], Profundidad, false) :- % false -> minimizar, jugadas del oponente
-	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, false), % Para reducir el tiempo de ejecución por el backtracking
-	Jugadas \= [],
 	Profundidad > 0,
 	NuevaProfundidad is Profundidad - 1,
+	generarJugadasInmediatas(JugadaActual, Jugadas, false),
 	minimaxVariasJugadas(Jugadas, JugadasYHeuristicas, NuevaProfundidad, true),
 	minimaHeuristica(JugadasYHeuristicas, JugadaOptima, Heuristica).
-% Los nodos sin más jugadas posibles son terminales, y si heurística se calcula directamente
-minimax_impl(JugadaActual, [JugadaActual, Heuristica], _, false) :- % false -> minimizar, jugadas del oponente
-	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, false), % Para reducir el tiempo de ejecución por el backtracking
-	Jugadas = [],
-	heuristica(JugadaActual, Heuristica).
-
-:- dynamic generarJugadasInmediatas_/3.
-% Si no hemos computado ya el resultado de generarJugadasInmediatas sobre los argumentos dados, hacerlo y guardarlo para reusarlo
-generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas) :-
-	not(generarJugadasInmediatas_(JugadaActual, Jugadas, MisJugadas)),
-	generarJugadasInmediatas(JugadaActual, Jugadas, MisJugadas),
-	assertz(generarJugadasInmediatas_(JugadaActual, Jugadas, MisJugadas)).
-% Si ya tenemos el resultado en caché, sacarlo directamente de ahí, para no tener que volver a repetir los cálculos
-generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas) :- generarJugadasInmediatas_(JugadaActual, Jugadas, MisJugadas).
-% Eliminar datos guardados en caché que pudieran quedar
-borrar_generarJugadasInmediatas_cacheado :- retractall(generarJugadasInmediatas_(_, _, _)).
 
 % Si no tenemos jugadas a las que aplicar minimax, no hacerlo (caso base)
 minimaxVariasJugadas([], [], _, _).
@@ -213,38 +189,18 @@ siguienteMovimiento(X, Y, MiMovimiento, movimiento(X, Y, MiMovimiento)) :-
 % Si la casilla actual no está libre, analizar la siguiente en la coordenada X
 siguienteMovimiento(X, Y, MiMovimiento, SigMovimiento) :-
 	anchoTablero(Ancho), altoTablero(Alto),
-	AnchoComp is Ancho - 1,
-	X < AnchoComp, Y < Alto,
+	X < Ancho, Y < Alto,
+	tablero(X, Y, Id), Id \= 0,
 	XSig is X + 1,
-	tablero(XSig, Y, Id), Id \= 0,
 	siguienteMovimiento(XSig, Y, MiMovimiento, SigMovimiento).
-% Si la casilla actual no está libre, pero la siguiente en X sí, esa siguiente es
-% nuestro siguiente movimiento
-siguienteMovimiento(X, Y, MiMovimiento, movimiento(XSig, Y, MiMovimiento)) :-
-	anchoTablero(Ancho), altoTablero(Alto),
-	AnchoComp is Ancho - 1,
-	X < AnchoComp, Y < Alto,
-	XSig is X + 1,
-	tablero(XSig, Y, Id), Id = 0.
-% Si la casilla actual no está libre, analizar la siguiente en la coordenada Y,
+% Si la casilla actual está desbordada en X, analizar la siguiente en la coordenada Y,
 % porque ya hemos agotado todas las coordenadas X de la Y anterior
 siguienteMovimiento(X, Y, MiMovimiento, SigMovimiento) :-
 	anchoTablero(Ancho), altoTablero(Alto),
 	AltoComp is Alto - 1,
 	X == Ancho, Y < AltoComp,
-	XSig is 0,
 	YSig is Y + 1,
-	tablero(XSig, YSig, Id), Id \= 0,
-	siguienteMovimiento(XSig, YSig, MiMovimiento, SigMovimiento).
-% Si no hemos analizado la casilla siguiente a la actual que se desborda en X,
-% y está libre, esta es la jugada que buscamos
-siguienteMovimiento(X, Y, MiMovimiento, movimiento(XSig, YSig, MiMovimiento)) :-
-	anchoTablero(Ancho), altoTablero(Alto),
-	AltoComp is Alto - 1,
-	X == Ancho, Y < AltoComp,
-	XSig is 0,
-	YSig is Y + 1,
-	tablero(XSig, YSig, Id), Id = 0.
+	siguienteMovimiento(0, YSig, MiMovimiento, SigMovimiento).
 
 % Sin jugada que aplicar, no hacer nada (caso base)
 aplicarJugada([]).
@@ -291,8 +247,7 @@ valorMaximo(A, B, A) :- A < B.
 
 % Predicado que obtiene la puntuación heurística de una jugada
 % TODO: la implementación final real de este predicado
-%heuristica(_, R) :- random(1, 6, R).
-heuristica(_, 5).
+heuristica(_, R) :- random(-2000, 2000, R).
 
 % FIXME: predicados de prueba
 soyYoAIdentificadorJugador(true, 1).
