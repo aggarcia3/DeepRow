@@ -100,10 +100,13 @@ minimax(JugadaYHeuristica) :-
 	profundidadArbolJuego(P),
 	minimax_impl([], JugadaYHeuristica, P, true),
 	borrar_generarJugadasInmediatas_cacheado. % Borra datos en caché para partir de un estado limpio
+:- dynamic haciendoMaximin/0.
 % Cláusula interfaz para obtener la jugada óptima a realizar para perder el juego, con su heurística asociada
 maximin(JugadaYHeuristica) :-
 	profundidadArbolJuego(P),
+	asserta(haciendoMaximin), % Para que no se tenga en cuenta la inversión del jugador que maximiza para generar jugadas
 	minimax_impl([], JugadaYHeuristica, P, false),
+	retract(haciendoMaximin),
 	borrar_generarJugadasInmediatas_cacheado. % Borra datos en caché para partir de un estado limpio
 % Si la profundidad restante es cero, no generar hijos para este nodo,
 % y considerar la heurística del nodo como la heurística de la jugada que representa
@@ -113,7 +116,8 @@ minimax_impl(JugadaActual, [JugadaActual, Heuristica], 0, _) :- heuristica(Jugad
 % y considerar la heurística del nodo como la heurística máxima o mínima de las jugadas
 % hijas
 minimax_impl(JugadaActual, [JugadaOptima, Heuristica], Profundidad, true) :- % true -> maximizar, mis jugadas
-	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, true), % Para reducir el tiempo de ejecución por el backtracking
+	misJugadasTeniendoCuentaMaximin(true, MisJugadas),
+	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas), % Para reducir el tiempo de ejecución por el backtracking
 	Jugadas \= [],
 	Profundidad > 0, % Para no unificar con lo que debe atenderse por minimax_impl(JugadaActual, [JugadaActual, Heuristica], 0, _)
 	NuevaProfundidad is Profundidad - 1,
@@ -121,22 +125,29 @@ minimax_impl(JugadaActual, [JugadaOptima, Heuristica], Profundidad, true) :- % t
 	maximaHeuristica(JugadasYHeuristicas, JugadaOptima, Heuristica).
 % Los nodos sin más jugadas posibles son terminales, y su heurística se calcula directamente
 minimax_impl(JugadaActual, [JugadaActual, Heuristica], _, true) :- % true -> maximizar, mis jugadas
-	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, true), % Para reducir el tiempo de ejecución por el backtracking
+	misJugadasTeniendoCuentaMaximin(true, MisJugadas),
+	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas), % Para reducir el tiempo de ejecución por el backtracking
 	Jugadas = [],
 	heuristica(JugadaActual, Heuristica).
 minimax_impl(JugadaActual, [JugadaOptima, Heuristica], Profundidad, false) :- % false -> minimizar, jugadas del oponente
-	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, false), % Para reducir el tiempo de ejecución por el backtracking
+	misJugadasTeniendoCuentaMaximin(false, MisJugadas),
+	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas), % Para reducir el tiempo de ejecución por el backtracking
 	Jugadas \= [],
 	Profundidad > 0,
 	NuevaProfundidad is Profundidad - 1,
-	generarJugadasInmediatas(JugadaActual, Jugadas, false),
 	minimaxVariasJugadas(Jugadas, JugadasYHeuristicas, NuevaProfundidad, true),
 	minimaHeuristica(JugadasYHeuristicas, JugadaOptima, Heuristica).
 % Los nodos sin más jugadas posibles son terminales, y su heurística se calcula directamente
 minimax_impl(JugadaActual, [JugadaActual, Heuristica], _, false) :- % false -> minimizar, jugadas del oponente
-	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, false), % Para reducir el tiempo de ejecución por el backtracking
+	misJugadasTeniendoCuentaMaximin(false, MisJugadas),
+	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas), % Para reducir el tiempo de ejecución por el backtracking
 	Jugadas = [],
 	heuristica(JugadaActual, Heuristica).
+
+% Devuelve el valor apropiado de MiJugada para la generación de jugadas, teniendo en cuenta si se está ejecutando minimax o bien maximin.
+% Esencialmente, estas cláusulas hacen que resultado = MiJugada XOR haciendoMaximin.
+misJugadasTeniendoCuentaMaximin(MiJugada, true) :- (not(MiJugada), haciendoMaximin); (MiJugada, not(haciendoMaximin)).
+misJugadasTeniendoCuentaMaximin(MiJugada, false) :- (not(MiJugada), not(haciendoMaximin)); (MiJugada, haciendoMaximin).
 
 :- dynamic generarJugadasInmediatas_/3.
 % Si no hemos computado ya el resultado de generarJugadasInmediatas sobre los argumentos dados, hacerlo y guardarlo para reusarlo
