@@ -32,7 +32,7 @@ minimax(JugadaYHeuristica) :-
 // Cláusula interfaz para obtener la jugada óptima a realizar para perder el juego, con su heurística asociada
 maximin(JugadaYHeuristica) :-
 	profundidadArbolJuego(P) &
-	.asserta(haciendoMaximin) &
+	.asserta(haciendoMaximin) & // Para que no se tenga en cuenta la inversión del jugador que maximiza para generar jugadas
 	minimax_impl([], JugadaYHeuristica, P, false) &
 	.abolish(haciendoMaximin) &
 	borrar_generarJugadasInmediatas_cacheado. // Borra datos en caché para partir de un estado limpio
@@ -204,7 +204,7 @@ valorMaximo(A, B, A) :- A < B.
 
 // Predicado que obtiene la puntuación heurística de una jugada
 // TODO: la implementación final real de este predicado
-heuristica(J, math.floor(-1000 + R * 2000)) :- .random(R).
+heuristica(_, math.floor(-1000 + R * 2000)) :- .random(R).
 
 soyYoAIdentificadorJugador(true, Id) :-
 	.my_name(Yo) &
