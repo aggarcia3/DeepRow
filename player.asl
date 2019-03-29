@@ -206,6 +206,9 @@ valorMaximo(A, B, A) :- A < B.
 // TODO: la implementación final real de este predicado
 heuristica(_, math.floor(-1000 + R * 2000)) :- .random(R).
 
+// Si el primer parámetro es verdadero, unifica Id con el ID del jugador actual,
+// que es el mismo que se usa en los predicados de funtor tablero/3.
+// Si el primer parámetro es falso, entonces unifica Id con el ID del otro jugador.
 soyYoAIdentificadorJugador(true, Id) :-
 	.my_name(Yo) &
 	.delete("player", Yo, IdStr) &
@@ -224,6 +227,8 @@ soyYoAIdentificadorJugador(false, 1 + (MiId mod 2)) :- soyYoAIdentificadorJugado
 +turno(Yo)[source(percept)] : .my_name(Yo) <-
 	.wait(1000); // Por si estamos recibiendo todavía percepciones del tablero
 
+	// Dependiendo de la estrategia a emplear, escoger el mejor o peor movimiento
+	// (desde nuestro punto de vista)
 	?estrategia(Est);
 	if (Est = jugarAGanar) {
 		?mejorSiguienteCasilla(X, Y);
@@ -231,7 +236,7 @@ soyYoAIdentificadorJugador(false, 1 + (MiId mod 2)) :- soyYoAIdentificadorJugado
 		?peorSiguienteCasilla(X, Y);
 	};
 
-	// Realizar el movimiento
+	// Realizar el movimiento a esa casilla
 	put(X, Y).
 
 // Descartar comunicaciones que lleguen de otros agentes, pues solo nos interesa
