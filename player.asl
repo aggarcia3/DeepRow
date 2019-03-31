@@ -5,8 +5,7 @@
 // corrección y tiempo de ejecución del algoritmo: más profundidad aumenta
 // la calidad de las jugadas, a costa de mayor tiempo de ejecución y consumo de
 // memoria
-profundidadArbolJuego(2). // En SWI-Prolog, estas mismas reglas permiten llegar a 3 niveles de profundidad en un tiempo similar.
-                          // Jason es menos eficiente, y no tiene corte para ayudar ;-(
+profundidadArbolJuego(2). // En SWI-Prolog, estas mismas reglas se ejecutan en mucho menos tiempo que en Jason ;-(
 
 // Las dimensiones del tablero
 anchoTablero(8).
@@ -39,7 +38,10 @@ maximin(JugadaYHeuristica) :-
 // Si la profundidad restante es cero, no generar hijos para este nodo,
 // y considerar la heurística del nodo como la heurística de la jugada que representa
 // (caso base)
-minimax_impl(JugadaActual, [JugadaActual, Heuristica], 0, _) :- heuristica(JugadaActual, Heuristica).
+minimax_impl(JugadaActual, [JugadaActual, Heuristica], 0, _) :-
+	aplicarJugada(JugadaActual) &
+	heuristica(Heuristica) &
+	deshacerJugada(JugadaActual).
 // Si la profundidad restante no es cero, generar hijos para este nodo del árbol
 // y considerar la heurística del nodo como la heurística máxima o mínima de las jugadas
 // hijas
@@ -55,7 +57,9 @@ minimax_impl(JugadaActual, [JugadaActual, Heuristica], _, true) :- // true -> ma
 	misJugadasTeniendoCuentaMaximin(true, MisJugadas) &
 	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas) & // Para reducir el tiempo de ejecución por el backtracking
 	Jugadas = [] &
-	heuristica(JugadaActual, Heuristica).
+	aplicarJugada(JugadaActual) &
+	heuristica(JugadaActual, Heuristica) &
+	deshacerJugada(JugadaActual).
 minimax_impl(JugadaActual, [JugadaOptima, Heuristica], Profundidad, false) :- // false -> minimizar, jugadas del oponente
 	misJugadasTeniendoCuentaMaximin(false, MisJugadas) &
 	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas) & // Para reducir el tiempo de ejecución por el backtracking
@@ -68,7 +72,9 @@ minimax_impl(JugadaActual, [JugadaActual, Heuristica], _, false) :- // false -> 
 	misJugadasTeniendoCuentaMaximin(false, MisJugadas) &
 	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas) & // Para reducir el tiempo de ejecución por el backtracking
 	Jugadas = [] &
-	heuristica(JugadaActual, Heuristica).
+	aplicarJugada(JugadaActual) &
+	heuristica(Heuristica) &
+	deshacerJugada(JugadaActual).
 
 // Devuelve el valor apropiado de MiJugada para la generación de jugadas, teniendo en cuenta si se está ejecutando minimax o bien maximin.
 // Esencialmente, estas cláusulas hacen que resultado = MiJugada XOR haciendoMaximin.
@@ -194,9 +200,9 @@ append_dl(difListas(Inicio1, Fin1), difListas(Fin1, Fin2), difListas(Inicio1, Fi
 append_simple([], L, L).
 append_simple([Car|Cdr], L, [Car|R]) :- append_simple(Cdr, L, R).
 
-// Predicado que obtiene la puntuación heurística de una jugada
+// Predicado que obtiene la puntuación heurística del estado actual del tablero
 // TODO: la implementación final real de este predicado
-heuristica(_, math.floor(-1000 + R * 2000)) :- .random(R).
+heuristica(math.floor(-1000 + R * 2000)) :- .random(R).
 
 // Si el primer parámetro es verdadero, unifica Id con el ID del jugador actual,
 // que es el mismo que se usa en los predicados de funtor tablero/3.
