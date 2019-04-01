@@ -194,7 +194,7 @@ minimaxVariasJugadas_impl([Jugada|Cdr], Profundidad, Maximizar, JugadaOptima, He
 	negar(Maximizar, MaximizarAnterior),
 	minimax_impl_cacheado(Jugada, [_, HeuristicaComp], Profundidad, Maximizar),
 	valorOptimo(HeuristicaComp, HeuristicaActual, MaximizarAnterior, HeuristicaOptimaActual),
-	HeuristicaOptimaActual = HeuristicaActual, % Nueva jugada óptima
+	HeuristicaOptimaActual = HeuristicaActual, % No es nueva jugada óptima
 	minimaxVariasJugadas_impl(Cdr, Profundidad, Maximizar, JugadaOptima, Heuristica, JugadaOptimaActual, HeuristicaActual).
 
 :- dynamic minimax_impl_/4.
