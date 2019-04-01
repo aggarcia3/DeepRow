@@ -161,9 +161,9 @@ borrar_generarJugadasInmediatas_cacheado :- retractall(generarJugadasInmediatas_
 % Cláusula interfaz para calcular la jugada más óptima según minimax para el nivel de profundidad actual
 minimaxVariasJugadas(Jugadas, Profundidad, Maximizar, JugadaOptima, Heuristica) :-
 	heuristicaVictoria(MaxHeuristica),
-	MaxHeuristicaProc is MaxHeuristica - 1, % Para que la condición de igualdad en minimaxVariasJugadas_impl/7 no dé problemas con jugadas ganadoras
+	MaxHeuristicaProc is MaxHeuristica + 1, % Para que la condición de igualdad en minimaxVariasJugadas_impl/7 no dé problemas con jugadas ganadoras
 	heuristicaDerrota(MinHeuristica),
-	MinHeuristicaProc is MinHeuristica + 1,
+	MinHeuristicaProc is MinHeuristica - 1,
 	valorOptimo(MinHeuristicaProc, MaxHeuristicaProc, Maximizar, HeuristicaComp), % Maximizar = true -> HeuristicaComp = MaxHeuristica
 	minimaxVariasJugadas_impl(Jugadas, Profundidad, Maximizar, JugadaOptima, Heuristica, _, HeuristicaComp).
 % Si solo nos queda una jugada a la que aplicar minimax, finalizar la recursividad según sea una nueva óptima o no.
