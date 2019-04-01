@@ -9,7 +9,7 @@
 % corrección y tiempo de ejecución del algoritmo: más profundidad aumenta
 % la calidad de las jugadas, a costa de mayor tiempo de ejecución y consumo de
 % memoria
-profundidadArbolJuego(2).
+profundidadArbolJuego(1).
 
 % Las dimensiones del tablero
 anchoTablero(8).
@@ -25,8 +25,8 @@ heuristicaDerrota(-999999).
 % El estado actual del tablero. Se asume que el estado es completo
 % y consistente
 :- dynamic tablero/3.
-tablero(0, 0, 0).
-tablero(0, 1, 0).
+tablero(0, 0, 1).
+tablero(0, 1, 2).
 tablero(0, 2, 0).
 tablero(0, 3, 0).
 tablero(0, 4, 0).
@@ -34,7 +34,7 @@ tablero(0, 5, 0).
 tablero(0, 6, 0).
 tablero(0, 7, 0).
 tablero(1, 0, 0).
-tablero(1, 1, 0).
+tablero(1, 1, 1).
 tablero(1, 2, 0).
 tablero(1, 3, 0).
 tablero(1, 4, 0).
@@ -61,7 +61,7 @@ tablero(4, 0, 0).
 tablero(4, 1, 0).
 tablero(4, 2, 0).
 tablero(4, 3, 0).
-tablero(4, 4, 1).
+tablero(4, 4, 0).
 tablero(4, 5, 0).
 tablero(4, 6, 0).
 tablero(4, 7, 0).
@@ -70,7 +70,7 @@ tablero(5, 1, 0).
 tablero(5, 2, 0).
 tablero(5, 3, 0).
 tablero(5, 4, 0).
-tablero(5, 5, 1).
+tablero(5, 5, 0).
 tablero(5, 6, 0).
 tablero(5, 7, 0).
 tablero(6, 0, 0).
@@ -79,7 +79,7 @@ tablero(6, 2, 0).
 tablero(6, 3, 0).
 tablero(6, 4, 0).
 tablero(6, 5, 0).
-tablero(6, 6, 1).
+tablero(6, 6, 0).
 tablero(6, 7, 0).
 tablero(7, 0, 0).
 tablero(7, 1, 0).
@@ -88,7 +88,7 @@ tablero(7, 3, 0).
 tablero(7, 4, 0).
 tablero(7, 5, 0).
 tablero(7, 6, 0).
-tablero(7, 7, 1).
+tablero(7, 7, 0).
 
 % Cláusulas interfaz para obtener la casilla donde colocar una ficha para maximizar
 % nuestra victoria o la del contrincante

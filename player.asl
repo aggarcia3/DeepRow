@@ -5,7 +5,7 @@
 // corrección y tiempo de ejecución del algoritmo: más profundidad aumenta
 // la calidad de las jugadas, a costa de mayor tiempo de ejecución y consumo de
 // memoria
-profundidadArbolJuego(2). // En SWI-Prolog, estas mismas reglas se ejecutan en mucho menos tiempo que en Jason ;-(
+profundidadArbolJuego(1). // En SWI-Prolog, estas mismas reglas se ejecutan en mucho menos tiempo que en Jason ;-(
 
 // Las dimensiones del tablero
 anchoTablero(8).
@@ -40,9 +40,7 @@ maximin(JugadaYHeuristica) :-
 // (caso base)
 minimax_impl(JugadaActual, [JugadaActual, Heuristica], 0, _) :-
 	aplicarJugada(JugadaActual) &
-	.print("Empiezo cálculo") &
 	heuristica(JugadaActual, Heuristica) &
-	.print(JugadaActual, ": ", Heuristica) &
 	borrarCachesHeuristica &
 	deshacerJugada(JugadaActual).
 // Si la profundidad restante no es cero, generar hijos para este nodo del árbol
@@ -61,9 +59,7 @@ minimax_impl(JugadaActual, [JugadaActual, Heuristica], _, true) :- // true -> ma
 	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas) & // Para reducir el tiempo de ejecución por el backtracking
 	Jugadas = [] &
 	aplicarJugada(JugadaActual) &
-	.print("Empiezo cálculo") &
 	heuristica(JugadaActual, Heuristica) &
-	.print(JugadaActual, ": ", Heuristica) &
 	borrarCachesHeuristica &
 	deshacerJugada(JugadaActual).
 minimax_impl(JugadaActual, [JugadaOptima, Heuristica], Profundidad, false) :- // false -> minimizar, jugadas del oponente
@@ -79,9 +75,7 @@ minimax_impl(JugadaActual, [JugadaActual, Heuristica], _, false) :- // false -> 
 	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas) & // Para reducir el tiempo de ejecución por el backtracking
 	Jugadas = [] &
 	aplicarJugada(JugadaActual) &
-	.print("Empiezo cálculo") &
 	heuristica(JugadaActual, Heuristica) &
-	.print(JugadaActual, ": ", Heuristica) &
 	borrarCachesHeuristica &
 	deshacerJugada(JugadaActual).
 

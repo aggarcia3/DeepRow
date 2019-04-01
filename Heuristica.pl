@@ -47,7 +47,7 @@ caracteristicaImpedirRaya_impl(CaracteristicaImpedirRaya, Fichas, X, Y, Acumulad
 	X < Ancho, Y < Alto,
 	impidoRaya(true, X, Y, Fichas),
 	XSig is X + 1,
-	NuevoAcumulador is Acumulador + 1,
+	NuevoAcumulador is Acumulador + 1, % TODO: + n, siendo N el número de maneras posibles de impedir raya
 	caracteristicaImpedirRaya_impl(CaracteristicaImpedirRaya, Fichas, XSig, Y, NuevoAcumulador).
 % Si en la posición actual no hemos impedido una raya de N fichas, pero podemos seguir incrementando X, hacer eso
 caracteristicaImpedirRaya_impl(CaracteristicaImpedirRaya, Fichas, X, Y, Acumulador) :-
