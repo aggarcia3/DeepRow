@@ -164,7 +164,7 @@ minimaxVariasJugadas(Jugadas, Profundidad, Maximizar, JugadaOptima, Heuristica) 
 	MaxHeuristicaProc is MaxHeuristica - 1, % Para que la condición de igualdad en minimaxVariasJugadas_impl/7 no dé problemas con jugadas ganadoras
 	heuristicaDerrota(MinHeuristica),
 	MinHeuristicaProc is MinHeuristica + 1,
-	valorOptimo(MinHeuristicaProc, MaxHeuristicaProc, Maximizar, HeuristicaComp), % Maximizar = true -> HeuristicaComp = MinHeuristica
+	valorOptimo(MinHeuristicaProc, MaxHeuristicaProc, Maximizar, HeuristicaComp), % Maximizar = true -> HeuristicaComp = MaxHeuristica
 	minimaxVariasJugadas_impl(Jugadas, Profundidad, Maximizar, JugadaOptima, Heuristica, _, HeuristicaComp).
 % Si solo nos queda una jugada a la que aplicar minimax, finalizar la recursividad según sea una nueva óptima o no.
 % Establecemos el caso base en la lista de un elemento para evitar incongruencias en el backtracking de siguientes soluciones,
