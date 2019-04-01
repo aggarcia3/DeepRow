@@ -10,6 +10,9 @@
 % Vamos a usar reglas definidas en este fichero
 :- consult("Minimax.pl").
 
+% Para depuración más fácil del algoritmo minimax (reduce los tamaños de la resolvente a trazar)
+%heuristica(_, V) :- random(0, 20000, V), !.
+
 % Predicados que obtiene la puntuación heurística del estado actual del tablero
 % Si yo he ganado, la heurística será la máxima
 % TODO: hacer que minimax no siga generando nodos hoja tras un estado terminal (victoria de algún jugador).
@@ -30,7 +33,7 @@ heuristica(Jugada, Valor) :-
 	not(ValorVerdadGanado), not(ValorVerdadPerdido),
 	heuristicaPonderadaLineal(Valor).
 
-% Calcula una puntuación heurística a partir de características de la jugada que se consideran positivas (y negativas)
+% Calcula una puntuación heurística a partir de características del tablero que se consideran positivas (y negativas)
 heuristicaPonderadaLineal(Valor) :-
 	caracteristicaImpedirRaya(CaracteristicaImpedirVictoria, 4),
 	caracteristicaRaya(true, CaracteristicaRaya3, 3),
@@ -105,6 +108,8 @@ jugadorGano_cacheado(Jugada, Yo, ValorVerdad) :-
 	jugadorGano(Yo, ValorVerdad), % El parámetro Jugada tan solo nos interesa para distinguir entre estados del tablero y garantizar coherencia de caché, no para computar si el jugador ha ganado
 	assertz(jugadorGano_(Jugada, Yo, ValorVerdad)).
 jugadorGano_cacheado(Jugada, Yo, ValorVerdad) :- jugadorGano_(Jugada, Yo, ValorVerdad).
+% Borra de la base de conocimiento reglas temporales, usadas para recordar resultados parciales
+borrar_jugadorGano_cacheado :- retractall(jugadorGano_(_, _, _)).
 
 % Cláusula interfaz para comprobar si alguien ha ganado la partida o no. El segundo argumento existe para que se pueda guardar
 % en caché el valor de salida de tal argumento, en vez de si se ha encontrado una solución o no.
@@ -196,7 +201,3 @@ fichaEn(Mia, X, Y) :-
 % Obtiene la negación de un valor de verdad en un argumento, utilizando la negación por fallo disponible en Prolog
 negar(ValorVerdad, false) :- ValorVerdad.
 negar(ValorVerdad, true) :- not(ValorVerdad).
-
-% Borra de la base de conocimiento reglas temporales, usadas para recordar resultados parciales
-borrarCachesHeuristica :-
-	retractall(jugadorGano_(_, _, _)).
