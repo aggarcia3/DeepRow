@@ -61,7 +61,7 @@ tablero(4, 0, 0).
 tablero(4, 1, 0).
 tablero(4, 2, 0).
 tablero(4, 3, 0).
-tablero(4, 4, 0).
+tablero(4, 4, 1).
 tablero(4, 5, 0).
 tablero(4, 6, 0).
 tablero(4, 7, 0).
@@ -70,7 +70,7 @@ tablero(5, 1, 0).
 tablero(5, 2, 0).
 tablero(5, 3, 0).
 tablero(5, 4, 0).
-tablero(5, 5, 0).
+tablero(5, 5, 1).
 tablero(5, 6, 0).
 tablero(5, 7, 0).
 tablero(6, 0, 0).
@@ -79,7 +79,7 @@ tablero(6, 2, 0).
 tablero(6, 3, 0).
 tablero(6, 4, 0).
 tablero(6, 5, 0).
-tablero(6, 6, 0).
+tablero(6, 6, 1).
 tablero(6, 7, 0).
 tablero(7, 0, 0).
 tablero(7, 1, 0).
@@ -88,7 +88,7 @@ tablero(7, 3, 0).
 tablero(7, 4, 0).
 tablero(7, 5, 0).
 tablero(7, 6, 0).
-tablero(7, 7, 0).
+tablero(7, 7, 1).
 
 % Cláusulas interfaz para obtener la casilla donde colocar una ficha para maximizar
 % nuestra victoria o la del contrincante
@@ -113,7 +113,8 @@ maximin(JugadaYHeuristica) :-
 % (caso base)
 minimax_impl(JugadaActual, [JugadaActual, Heuristica], 0, _) :-
 	aplicarJugada(JugadaActual),
-	heuristica(Heuristica),
+	heuristica(JugadaActual, Heuristica),
+	borrarCachesHeuristica,
 	deshacerJugada(JugadaActual).
 % Si la profundidad restante no es cero, generar hijos para este nodo del árbol
 % y considerar la heurística del nodo como la heurística máxima o mínima de las jugadas
@@ -132,7 +133,8 @@ minimax_impl(JugadaActual, [JugadaActual, Heuristica], _, true) :- % true -> max
 	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas), % Para reducir el tiempo de ejecución por el backtracking
 	Jugadas = [],
 	aplicarJugada(JugadaActual),
-	heuristica(Heuristica),
+	heuristica(JugadaActual, Heuristica),
+	borrarCachesHeuristica,
 	deshacerJugada(JugadaActual).
 minimax_impl(JugadaActual, [JugadaOptima, Heuristica], Profundidad, false) :- % false -> minimizar, jugadas del oponente
 	misJugadasTeniendoCuentaMaximin(false, MisJugadas),
@@ -148,7 +150,8 @@ minimax_impl(JugadaActual, [JugadaActual, Heuristica], _, false) :- % false -> m
 	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas), % Para reducir el tiempo de ejecución por el backtracking
 	Jugadas = [],
 	aplicarJugada(JugadaActual),
-	heuristica(Heuristica),
+	heuristica(JugadaActual, Heuristica),
+	borrarCachesHeuristica,
 	deshacerJugada(JugadaActual).
 
 % Devuelve el valor apropiado de MiJugada para la generación de jugadas, teniendo en cuenta si se está ejecutando minimax o bien maximin.
@@ -280,10 +283,6 @@ append_dl(difListas(Inicio1, Fin1), difListas(Fin1, Fin2), difListas(Inicio1, Fi
 append_simple([], L, L).
 append_simple([Car|Cdr], L, [Car|R]) :- append_simple(Cdr, L, R).
 
-% Predicado que obtiene la puntuación heurística del estado actual del tablero
-% TODO: la implementación final real de este predicado
-heuristica(R) :- random(-2000, 2000, R).
-
-% FIXME: predicados de prueba
+% FIXME: predicados de prueba. En Jason quizás sea provechoso almacenar su resultado, pero suena a microoptimización
 soyYoAIdentificadorJugador(true, 1).
 soyYoAIdentificadorJugador(false, 2).
