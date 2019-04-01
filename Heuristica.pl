@@ -20,7 +20,7 @@ heuristica(Jugada, Valor) :-
 	heuristicaVictoria(Valor).
 % Si el contrincante ha ganado, la heurística será la mínima
 heuristica(Jugada, Valor) :-
-	jugadorGano_cacheado(false, ValorVerdadPerdido),
+	jugadorGano_cacheado(Jugada, false, ValorVerdadPerdido),
 	ValorVerdadPerdido,
 	heuristicaDerrota(Valor).
 % En otro caso (nadie ha ganado), la heurística se calculará en base a una función ponderada lineal
@@ -101,7 +101,7 @@ caracteristicaRaya_impl(_, CaracteristicaRaya, _, _, Y, CaracteristicaRaya) :-
 % por jugada
 :- dynamic jugadorGano_/3.
 jugadorGano_cacheado(Jugada, Yo, ValorVerdad) :-
-	not(jugadorGano_(Juagada, Yo, ValorVerdad)),
+	not(jugadorGano_(Jugada, Yo, ValorVerdad)),
 	jugadorGano(Yo, ValorVerdad),
 	assertz(jugadorGano_(Jugada, Yo, ValorVerdad)).
 jugadorGano_cacheado(Jugada, Yo, ValorVerdad) :- jugadorGano_(Jugada, Yo, ValorVerdad).
