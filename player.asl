@@ -5,7 +5,7 @@
 // corrección y tiempo de ejecución del algoritmo: más profundidad aumenta
 // la calidad de las jugadas, a costa de mayor tiempo de ejecución y consumo de
 // memoria
-profundidadArbolJuego(1). // En SWI-Prolog, estas mismas reglas se ejecutan en mucho menos tiempo que en Jason ;-(
+profundidadArbolJuego(2). // En SWI-Prolog, estas mismas reglas se ejecutan en mucho menos tiempo que en Jason ;-(
 
 // Las dimensiones del tablero
 anchoTablero(8).
@@ -40,6 +40,7 @@ maximin(JugadaYHeuristica) :-
 // (caso base)
 minimax_impl(JugadaActual, [JugadaActual, Heuristica], 0, _) :-
 	aplicarJugada(JugadaActual) &
+	.print("Empiezo cálculo") &
 	heuristica(JugadaActual, Heuristica) &
 	.print(JugadaActual, ": ", Heuristica) &
 	borrarCachesHeuristica &
@@ -60,6 +61,7 @@ minimax_impl(JugadaActual, [JugadaActual, Heuristica], _, true) :- // true -> ma
 	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas) & // Para reducir el tiempo de ejecución por el backtracking
 	Jugadas = [] &
 	aplicarJugada(JugadaActual) &
+	.print("Empiezo cálculo") &
 	heuristica(JugadaActual, Heuristica) &
 	.print(JugadaActual, ": ", Heuristica) &
 	borrarCachesHeuristica &
@@ -77,6 +79,7 @@ minimax_impl(JugadaActual, [JugadaActual, Heuristica], _, false) :- // false -> 
 	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas) & // Para reducir el tiempo de ejecución por el backtracking
 	Jugadas = [] &
 	aplicarJugada(JugadaActual) &
+	.print("Empiezo cálculo") &
 	heuristica(JugadaActual, Heuristica) &
 	.print(JugadaActual, ": ", Heuristica) &
 	borrarCachesHeuristica &
@@ -218,15 +221,10 @@ heuristica(Jugada, Valor) :-
 // Calcula una puntuación heurística a partir de características de la jugada que se consideran positivas (y negativas)
 heuristicaPonderadaLineal(1000 * CaracteristicaImpedirVictoria + 180 * CaracteristicaRaya3 + 200 * CaracteristicaImpedirRaya3 + 18 * CaracteristicaRaya2 + 20 * CaracteristicaImpedirRaya2) :-
 	caracteristicaImpedirRaya(CaracteristicaImpedirVictoria, 4) &
-	.print("Impedir victoria: ", CaracteristicaImpedirVictoria) &
 	caracteristicaRaya(true, CaracteristicaRaya3, 3) &
-	.print("Raya 3: ", CaracteristicaRaya3) &
 	caracteristicaImpedirRaya(CaracteristicaImpedirRaya3, 3) &
-	.print("Impedir raya 3: ", CaracteristicaImpedirRaya3) &
 	caracteristicaRaya(true, CaracteristicaRaya2, 2) &
-	.print("Raya 2: ", CaracteristicaRaya2) &
-	caracteristicaImpedirRaya(CaracteristicaImpedirRaya2, 2) & 
-	.print("Impedir raya 2: ", CaracteristicaImpedirRaya2).
+	caracteristicaImpedirRaya(CaracteristicaImpedirRaya2, 2).
 
 // Cláusula interfaz que computa la característica de impedir la formación de una raya de N fichas del rival
 caracteristicaImpedirRaya(CaracteristicaImpedirRaya, Fichas) :- caracteristicaImpedirRaya_impl(CaracteristicaImpedirRaya, Fichas, 0, 0, 0).
@@ -340,7 +338,8 @@ rayaEnDireccion_impl(Yo, X, Y, Fichas, FichasContadas, DX, DY) :-
 // Regla que es cierta si y solo si un jugador impide al otro hacer una raya de N fichas, considerando la posición (X, Y)
 // como la ficha central de la raya del otro jugador (que debe de existir)
 impidoRaya(Yo, X, Y, Fichas) :-
-	fichaEn(not Yo, X, Y) &
+	negar(Yo, Otro) &
+	fichaEn(Otro, X, Y) &
 	(impidoRayaEnDireccion(Yo, X, Y, Fichas - 1, 1, 0) |
 	impidoRayaEnDireccion(Yo, X, Y, Fichas - 1, 0, 1) |
 	impidoRayaEnDireccion(Yo, X, Y, Fichas - 1, 1, 1) |
@@ -352,13 +351,14 @@ impidoRaya(Yo, X, Y, Fichas) :-
 // Cláusula interfaz para comprobar si, en el vector de dirección dado, impido una raya de N fichas a partir de (X, Y), colocando una
 // a distancia N + 1
 impidoRayaEnDireccion(Yo, X, Y, FichasRestantes, DX, DY) :-
-	rayaEnDireccion(not Yo, X, Y, FichasRestantes - 1, DX, DY) & // Solo se puede impedir una raya en la misma dirección
+	negar(Yo, Otro) &
+	rayaEnDireccion(Otro, X, Y, FichasRestantes - 1, DX, DY) & // Solo se puede impedir una raya en la misma dirección
 	fichaEn(Yo, X + DX * FichasRestantes, Y + DY * FichasRestantes).
 
 // Regla que es cierta si y solo si la posición (X, Y) tiene una ficha mía o del otro jugador
 fichaEn(Mia, X, Y) :-
-	tablero(X, Y, Id) &
-	soyYoAIdentificadorJugador(Mia, Id).
+	soyYoAIdentificadorJugador(Mia, Id) &
+	tablero(X, Y, Id).
 
 // Borra de la base de conocimiento reglas temporales, usadas para recordar resultados parciales
 borrarCachesHeuristica :-
@@ -372,6 +372,10 @@ append_dl(difListas(Inicio1, Fin1), difListas(Fin1, Fin2), difListas(Inicio1, Fi
 // Esta operación es de complejidad O(n), pero funciona en listas cerradas
 append_simple([], L, L).
 append_simple([Car|Cdr], L, [Car|R]) :- append_simple(Cdr, L, R).
+
+// Obtiene la negación de un valor de verdad en un argumento, utilizando la negación por fallo disponible en Jason
+negar(ValorVerdad, false) :- ValorVerdad.
+negar(ValorVerdad, true) :- not ValorVerdad.
 
 // Si el primer parámetro es verdadero, unifica Id con el ID del jugador actual,
 // que es el mismo que se usa en los predicados de funtor tablero/3.

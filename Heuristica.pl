@@ -167,7 +167,8 @@ rayaEnDireccion_impl(Yo, X, Y, Fichas, FichasContadas, DX, DY) :-
 % Regla que es cierta si y solo si un jugador impide al otro hacer una raya de N fichas, considerando la posición (X, Y)
 % como la ficha central de la raya del otro jugador (que debe de existir)
 impidoRaya(Yo, X, Y, Fichas) :-
-	fichaEn(not(Yo), X, Y),
+	negar(Yo, Otro),
+	fichaEn(Otro, X, Y),
 	FichasRestantes is Fichas - 1,
 	(impidoRayaEnDireccion(Yo, X, Y, FichasRestantes, 1, 0);
 	impidoRayaEnDireccion(Yo, X, Y, FichasRestantes, 0, 1);
@@ -181,15 +182,20 @@ impidoRaya(Yo, X, Y, Fichas) :-
 % a distancia N + 1
 impidoRayaEnDireccion(Yo, X, Y, FichasRestantes, DX, DY) :-
 	NuevasFichasRestantes is FichasRestantes - 1,
-	rayaEnDireccion(not(Yo), X, Y, NuevasFichasRestantes, DX, DY), % Solo se puede impedir una raya en la misma dirección
+	negar(Yo, Otro),
+	rayaEnDireccion(Otro, X, Y, NuevasFichasRestantes, DX, DY), % Solo se puede impedir una raya en la misma dirección
 	X1 is X + DX * FichasRestantes,
 	Y1 is Y + DY * FichasRestantes,
 	fichaEn(Yo, X1, Y1).
 
 % Regla que es cierta si y solo si la posición (X, Y) tiene una ficha mía o del otro jugador
 fichaEn(Mia, X, Y) :-
-	tablero(X, Y, Id),
-	soyYoAIdentificadorJugador(Mia, Id).
+	soyYoAIdentificadorJugador(Mia, Id),
+	tablero(X, Y, Id).
+
+% Obtiene la negación de un valor de verdad en un argumento, utilizando la negación por fallo disponible en Prolog
+negar(ValorVerdad, false) :- ValorVerdad.
+negar(ValorVerdad, true) :- not(ValorVerdad).
 
 % Borra de la base de conocimiento reglas temporales, usadas para recordar resultados parciales
 borrarCachesHeuristica :-
