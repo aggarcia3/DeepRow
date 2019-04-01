@@ -102,7 +102,7 @@ caracteristicaRaya_impl(_, CaracteristicaRaya, _, _, Y, CaracteristicaRaya) :-
 :- dynamic jugadorGano_/3.
 jugadorGano_cacheado(Jugada, Yo, ValorVerdad) :-
 	not(jugadorGano_(Jugada, Yo, ValorVerdad)),
-	jugadorGano(Yo, ValorVerdad),
+	jugadorGano(Yo, ValorVerdad), % El parámetro Jugada tan solo nos interesa para distinguir entre estados del tablero y garantizar coherencia de caché, no para computar si el jugador ha ganado
 	assertz(jugadorGano_(Jugada, Yo, ValorVerdad)).
 jugadorGano_cacheado(Jugada, Yo, ValorVerdad) :- jugadorGano_(Jugada, Yo, ValorVerdad).
 
@@ -154,6 +154,7 @@ raya(Yo, X, Y, Fichas) :-
 rayaEnDireccion(Yo, X, Y, Fichas, DX, DY) :- rayaEnDireccion_impl(Yo, X, Y, Fichas, 1, DX, DY).
 % Una raya de una ficha siempre se cumple en nuestro caso
 rayaEnDireccion_impl(_, _, _, 0, _, _, _).
+% Ver si la raya en esta dirección se mantiene hasta agotar el número de fichas deseado
 rayaEnDireccion_impl(Yo, X, Y, Fichas, FichasContadas, DX, DY) :-
 	Fichas > 0,
 	X1 is X + DX * FichasContadas,

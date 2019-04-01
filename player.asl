@@ -5,7 +5,7 @@
 // corrección y tiempo de ejecución del algoritmo: más profundidad aumenta
 // la calidad de las jugadas, a costa de mayor tiempo de ejecución y consumo de
 // memoria
-profundidadArbolJuego(2). // En SWI-Prolog, estas mismas reglas se ejecutan en mucho menos tiempo que en Jason ;-(
+profundidadArbolJuego(1). // En SWI-Prolog, estas mismas reglas se ejecutan en mucho menos tiempo que en Jason ;-(
 
 // Las dimensiones del tablero
 anchoTablero(8).
@@ -40,7 +40,9 @@ maximin(JugadaYHeuristica) :-
 // (caso base)
 minimax_impl(JugadaActual, [JugadaActual, Heuristica], 0, _) :-
 	aplicarJugada(JugadaActual) &
-	heuristica(Heuristica) &
+	heuristica(JugadaActual, Heuristica) &
+	.print(JugadaActual, ": ", Heuristica) &
+	borrarCachesHeuristica &
 	deshacerJugada(JugadaActual).
 // Si la profundidad restante no es cero, generar hijos para este nodo del árbol
 // y considerar la heurística del nodo como la heurística máxima o mínima de las jugadas
@@ -59,6 +61,8 @@ minimax_impl(JugadaActual, [JugadaActual, Heuristica], _, true) :- // true -> ma
 	Jugadas = [] &
 	aplicarJugada(JugadaActual) &
 	heuristica(JugadaActual, Heuristica) &
+	.print(JugadaActual, ": ", Heuristica) &
+	borrarCachesHeuristica &
 	deshacerJugada(JugadaActual).
 minimax_impl(JugadaActual, [JugadaOptima, Heuristica], Profundidad, false) :- // false -> minimizar, jugadas del oponente
 	misJugadasTeniendoCuentaMaximin(false, MisJugadas) &
@@ -73,7 +77,9 @@ minimax_impl(JugadaActual, [JugadaActual, Heuristica], _, false) :- // false -> 
 	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas) & // Para reducir el tiempo de ejecución por el backtracking
 	Jugadas = [] &
 	aplicarJugada(JugadaActual) &
-	heuristica(Heuristica) &
+	heuristica(JugadaActual, Heuristica) &
+	.print(JugadaActual, ": ", Heuristica) &
+	borrarCachesHeuristica &
 	deshacerJugada(JugadaActual).
 
 // Devuelve el valor apropiado de MiJugada para la generación de jugadas, teniendo en cuenta si se está ejecutando minimax o bien maximin.
@@ -191,6 +197,173 @@ deshacerMovimiento(movimiento(X, Y, SoyYoQuienHaceMov)) :-
 	.abolish(tablero(X, Y, Id)[source(percept)]) &
 	.asserta(tablero(X, Y, 0)[source(percept)]).
 
+// Predicados que obtiene la puntuación heurística del estado actual del tablero
+// Si yo he ganado, la heurística será la máxima
+heuristica(Jugada, Valor) :-
+	jugadorGano_cacheado(Jugada, true, ValorVerdadGanado) &
+	ValorVerdadGanado &
+	heuristicaVictoria(Valor).
+// Si el contrincante ha ganado, la heurística será la mínima
+heuristica(Jugada, Valor) :-
+	jugadorGano_cacheado(Jugada, false, ValorVerdadPerdido) &
+	ValorVerdadPerdido &
+	heuristicaDerrota(Valor).
+// En otro caso (nadie ha ganado), la heurística se calculará en base a una función ponderada lineal
+heuristica(Jugada, Valor) :-
+	jugadorGano_cacheado(Jugada, true, ValorVerdadGanado) &
+	jugadorGano_cacheado(Jugada, false, ValorVerdadPerdido) &
+	not ValorVerdadGanado & not ValorVerdadPerdido &
+	heuristicaPonderadaLineal(Valor).
+
+// Calcula una puntuación heurística a partir de características de la jugada que se consideran positivas (y negativas)
+heuristicaPonderadaLineal(1000 * CaracteristicaImpedirVictoria + 180 * CaracteristicaRaya3 + 200 * CaracteristicaImpedirRaya3 + 18 * CaracteristicaRaya2 + 20 * CaracteristicaImpedirRaya2) :-
+	caracteristicaImpedirRaya(CaracteristicaImpedirVictoria, 4) &
+	.print("Impedir victoria: ", CaracteristicaImpedirVictoria) &
+	caracteristicaRaya(true, CaracteristicaRaya3, 3) &
+	.print("Raya 3: ", CaracteristicaRaya3) &
+	caracteristicaImpedirRaya(CaracteristicaImpedirRaya3, 3) &
+	.print("Impedir raya 3: ", CaracteristicaImpedirRaya3) &
+	caracteristicaRaya(true, CaracteristicaRaya2, 2) &
+	.print("Raya 2: ", CaracteristicaRaya2) &
+	caracteristicaImpedirRaya(CaracteristicaImpedirRaya2, 2) & 
+	.print("Impedir raya 2: ", CaracteristicaImpedirRaya2).
+
+// Cláusula interfaz que computa la característica de impedir la formación de una raya de N fichas del rival
+caracteristicaImpedirRaya(CaracteristicaImpedirRaya, Fichas) :- caracteristicaImpedirRaya_impl(CaracteristicaImpedirRaya, Fichas, 0, 0, 0).
+// Si en la posición actual hemos impedido una raya de N fichas, considerarlo para la característica
+caracteristicaImpedirRaya_impl(CaracteristicaImpedirRaya, Fichas, X, Y, Acumulador) :-
+	anchoTablero(Ancho) & altoTablero(Alto) &
+	X < Ancho & Y < Alto &
+	impidoRaya(true, X, Y, Fichas) &
+	caracteristicaImpedirRaya_impl(CaracteristicaImpedirRaya, Fichas, X + 1, Y, Acumulador + 1).
+// Si en la posición actual no hemos impedido una raya de N fichas, pero podemos seguir incrementando X, hacer eso
+caracteristicaImpedirRaya_impl(CaracteristicaImpedirRaya, Fichas, X, Y, Acumulador) :-
+	anchoTablero(Ancho) & altoTablero(Alto) &
+	X < Ancho & Y < Alto &
+	not impidoRaya(true, X, Y, Fichas) &
+	caracteristicaImpedirRaya_impl(CaracteristicaImpedirRaya, Fichas, X + 1, Y, Acumulador).
+// Si hemos agotado las posiciones X de la fila actual, ir con la siguiente fila
+caracteristicaImpedirRaya_impl(CaracteristicaImpedirRaya, Fichas, X, Y, Acumulador) :-
+	anchoTablero(Ancho) & altoTablero(Alto) &
+	X == Ancho & Y < Alto &
+	caracteristicaImpedirRaya_impl(CaracteristicaImpedirRaya, Fichas, 0, Y + 1, Acumulador).
+// Si hemos llegado al final de las filas del tablero, es que hemos acabado, y el acumulador contiene
+// el valor final de la característica
+caracteristicaImpedirRaya_impl(CaracteristicaImpedirRaya, _, _, Y, CaracteristicaImpedirRaya) :-
+	altoTablero(Alto) &
+	Y >= Alto.
+
+// Cláusula interfaz que computa la característica de formar una raya de N fichas 
+caracteristicaRaya(Yo, CaracteristicaRaya, Fichas) :- caracteristicaRaya_impl(Yo, CaracteristicaRaya, Fichas, 0, 0, 0).
+// Si en la posición actual hemos formado una raya de N fichas, considerarlo para la característica
+caracteristicaRaya_impl(Yo, CaracteristicaRaya, Fichas, X, Y, Acumulador) :-
+	anchoTablero(Ancho) & altoTablero(Alto) &
+	X < Ancho & Y < Alto &
+	raya(Yo, X, Y, Fichas) &
+	caracteristicaRaya_impl(Yo, CaracteristicaRaya, Fichas, X + 1, Y, Acumulador + 1).
+// Si en la posición actual no hemos formado una raya de N fichas, pero podemos seguir incrementando X, hacer eso
+caracteristicaRaya_impl(Yo, CaracteristicaRaya, Fichas, X, Y, Acumulador) :-
+	anchoTablero(Ancho) & altoTablero(Alto) &
+	X < Ancho & Y < Alto &
+	not raya(Yo, X, Y, Fichas) &
+	caracteristicaRaya_impl(Yo, CaracteristicaRaya, Fichas, X + 1, Y, Acumulador).
+// Si hemos agotado las posiciones X de la fila actual, ir con la siguiente fila
+caracteristicaRaya_impl(Yo, CaracteristicaRaya, Fichas, X, Y, Acumulador) :-
+	anchoTablero(Ancho) & altoTablero(Alto) &
+	X == Ancho & Y < Alto &
+	caracteristicaRaya_impl(Yo, CaracteristicaRaya, Fichas, 0, Y + 1, Acumulador).
+// Si hemos llegado al final de las filas del tablero, es que hemos acabado, y el acumulador contiene
+// el valor final de la característica
+caracteristicaRaya_impl(_, CaracteristicaRaya, _, _, Y, CaracteristicaRaya) :-
+	altoTablero(Alto) &
+	Y >= Alto.
+
+// Si ya hemos computado el resultado de jugadorGano para la jugada actual, reusarlo. En caso contrario, computarlo una vez
+// por jugada
+jugadorGano_cacheado(Jugada, Yo, ValorVerdad) :-
+	not jugadorGano_(Jugada, Yo, ValorVerdad) &
+	jugadorGano(Yo, ValorVerdad) & // El parámetro Jugada tan solo nos interesa para distinguir entre estados del tablero y garantizar coherencia de caché, no para computar si el jugador ha ganado
+	.assertz(jugadorGano_(Jugada, Yo, ValorVerdad)).
+jugadorGano_cacheado(Jugada, Yo, ValorVerdad) :- jugadorGano_(Jugada, Yo, ValorVerdad).
+
+// Cláusula interfaz para comprobar si alguien ha ganado la partida o no. El segundo argumento existe para que se pueda guardar
+// en caché el valor de salida de tal argumento, en vez de si se ha encontrado una solución o no.
+// Diferencia principal entre esta regla y caracteristicaRaya: detiene la evaluación de rayas al encontrar la primera de 4,
+// y no sigue hasta el final del tablero, por lo que es algo más eficiente
+jugadorGano(Yo, ValorVerdad) :- jugadorGano_impl(0, 0, Yo, ValorVerdad).
+
+// Ha ganado si partiendo de esta casilla hay 4 en raya en cualquiera de las direcciones posibles
+jugadorGano_impl(X, Y, Yo, true) :-
+	anchoTablero(Ancho) & altoTablero(Alto) &
+	X < Ancho & Y < Alto &
+	raya(Yo, X, Y, 4).
+// Si no hay un 4 en raya en cualquiera de las direcciones posibles, y podemos ver si lo hay en la siguiente coordenada X,
+// hacer tal comprobación
+jugadorGano_impl(X, Y, Yo, ValorVerdad) :-
+	anchoTablero(Ancho) & altoTablero(Alto) &
+	X < Ancho & Y < Alto &
+	not raya(Yo, X, Y, 4) & // Para evitar backtracking por aquí. Quizás sea buena idea quitarlo si eso no es problema
+	jugadorGano_impl(X + 1, Y, Yo, ValorVerdad).
+// Si no hay siguiente coordenada X para esta Y, probar con la siguiente Y, empezando otra vez en 0 en X
+jugadorGano_impl(X, Y, Yo, ValorVerdad) :-
+	anchoTablero(Ancho) & altoTablero(Alto) &
+	X == Ancho & Y < Alto &
+	jugadorGano_impl(0, Y + 1, Yo, ValorVerdad).
+// Si acabamos de recorrer el tablero y no hemos determinado que alguien haya ganado, entonces
+// es que no ha ganado
+jugadorGano_impl(_, Y, _, false) :-
+	altoTablero(Alto) &
+	Y >= Alto.
+
+// Regla que es cierta si y solo si un jugador ha hecho una raya de N fichas, considerando la posición (X, Y) como la ficha
+// central de la hipotética raya
+raya(Yo, X, Y, Fichas) :-
+	fichaEn(Yo, X, Y) &
+	(rayaEnDireccion(Yo, X, Y, Fichas - 1, 1, 0) |
+	rayaEnDireccion(Yo, X, Y, Fichas - 1, 0, 1) |
+	rayaEnDireccion(Yo, X, Y, Fichas - 1, 1, 1) |
+	rayaEnDireccion(Yo, X, Y, Fichas - 1, -1, 1) |
+	rayaEnDireccion(Yo, X, Y, Fichas - 1, 1, -1) |
+	rayaEnDireccion(Yo, X, Y, Fichas - 1, -1, 0) |
+	rayaEnDireccion(Yo, X, Y, Fichas - 1, 0, -1) |
+	rayaEnDireccion(Yo, X, Y, Fichas - 1, -1, -1)).
+// Cláusula interfaz para comprobar si, en el vector de dirección dado, hay N fichas más a partir de (X, Y) que pueden formar cuatro en raya
+rayaEnDireccion(Yo, X, Y, Fichas, DX, DY) :- rayaEnDireccion_impl(Yo, X, Y, Fichas, 1, DX, DY).
+// Una raya de una ficha siempre se cumple en nuestro caso
+rayaEnDireccion_impl(_, _, _, 0, _, _, _).
+// Ver si la raya en esta dirección se mantiene hasta agotar el número de fichas deseado
+rayaEnDireccion_impl(Yo, X, Y, Fichas, FichasContadas, DX, DY) :-
+	Fichas > 0 &
+	fichaEn(Yo, X + DX * FichasContadas, Y + DY * FichasContadas) &
+	rayaEnDireccion_impl(Yo, X, Y, Fichas - 1, FichasContadas + 1, DX, DY).
+
+// Regla que es cierta si y solo si un jugador impide al otro hacer una raya de N fichas, considerando la posición (X, Y)
+// como la ficha central de la raya del otro jugador (que debe de existir)
+impidoRaya(Yo, X, Y, Fichas) :-
+	fichaEn(not Yo, X, Y) &
+	(impidoRayaEnDireccion(Yo, X, Y, Fichas - 1, 1, 0) |
+	impidoRayaEnDireccion(Yo, X, Y, Fichas - 1, 0, 1) |
+	impidoRayaEnDireccion(Yo, X, Y, Fichas - 1, 1, 1) |
+	impidoRayaEnDireccion(Yo, X, Y, Fichas - 1, -1, 1) |
+	impidoRayaEnDireccion(Yo, X, Y, Fichas - 1, 1, -1) |
+	impidoRayaEnDireccion(Yo, X, Y, Fichas - 1, -1, 0) |
+	impidoRayaEnDireccion(Yo, X, Y, Fichas - 1, 0, -1) |
+	impidoRayaEnDireccion(Yo, X, Y, Fichas - 1, -1, -1)).
+// Cláusula interfaz para comprobar si, en el vector de dirección dado, impido una raya de N fichas a partir de (X, Y), colocando una
+// a distancia N + 1
+impidoRayaEnDireccion(Yo, X, Y, FichasRestantes, DX, DY) :-
+	rayaEnDireccion(not Yo, X, Y, FichasRestantes - 1, DX, DY) & // Solo se puede impedir una raya en la misma dirección
+	fichaEn(Yo, X + DX * FichasRestantes, Y + DY * FichasRestantes).
+
+// Regla que es cierta si y solo si la posición (X, Y) tiene una ficha mía o del otro jugador
+fichaEn(Mia, X, Y) :-
+	tablero(X, Y, Id) &
+	soyYoAIdentificadorJugador(Mia, Id).
+
+// Borra de la base de conocimiento reglas temporales, usadas para recordar resultados parciales
+borrarCachesHeuristica :-
+	.abolish(jugadorGano_(_, _, _)).
+
 // Concatena dos listas expresadas como diferencias de listas.
 // Esta operación es de complejidad O(1)
 append_dl(difListas(Inicio1, Fin1), difListas(Fin1, Fin2), difListas(Inicio1, Fin2)).
@@ -199,10 +372,6 @@ append_dl(difListas(Inicio1, Fin1), difListas(Fin1, Fin2), difListas(Inicio1, Fi
 // Esta operación es de complejidad O(n), pero funciona en listas cerradas
 append_simple([], L, L).
 append_simple([Car|Cdr], L, [Car|R]) :- append_simple(Cdr, L, R).
-
-// Predicado que obtiene la puntuación heurística del estado actual del tablero
-// TODO: la implementación final real de este predicado
-heuristica(math.floor(-1000 + R * 2000)) :- .random(R).
 
 // Si el primer parámetro es verdadero, unifica Id con el ID del jugador actual,
 // que es el mismo que se usa en los predicados de funtor tablero/3.
