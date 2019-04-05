@@ -11,7 +11,7 @@
 :- consult("Minimax.pl").
 
 % Para depuración más fácil del algoritmo minimax (reduce los tamaños de la resolvente a trazar)
-%heuristica(_, V) :- random(0, 20000, V), !.
+%heuristica(_, V) :- random(0, 20000, V).
 
 % Predicados que obtiene la puntuación heurística del estado actual del tablero
 % Si yo he ganado, la heurística será la máxima
@@ -39,7 +39,7 @@ heuristicaPonderadaLineal(Valor) :-
 	caracteristicaRaya(true, CaracteristicaRaya2, 2),
 	caracteristicaImpedirRaya(CaracteristicaImpedirRaya2, 2),
 	caracteristicaFichasEnCentro(true, CaracteristicaFichasCentro),
-	Valor is 2000 * CaracteristicaImpedirVictoria + 360 * CaracteristicaRaya3 + 400 * CaracteristicaImpedirRaya3 + 36 * CaracteristicaRaya2 + 40 * CaracteristicaImpedirRaya2 + CaracteristicaFichasCentro.
+	Valor is 2000 * CaracteristicaImpedirVictoria + 5 * CaracteristicaRaya3 + 5 * CaracteristicaImpedirRaya3 + 4 * CaracteristicaRaya2 + 4 * CaracteristicaImpedirRaya2 + CaracteristicaFichasCentro.
 
 % Cláusula interfaz que computa la característica de impedir la formación de una raya de N fichas del rival
 caracteristicaImpedirRaya(CaracteristicaImpedirRaya, Fichas) :- caracteristicaImpedirRaya_impl(CaracteristicaImpedirRaya, Fichas, 0, 0, 0).
