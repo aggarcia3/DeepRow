@@ -99,7 +99,7 @@ caracteristicaRaya_impl(_, CaracteristicaRaya, _, _, Y, CaracteristicaRaya) :-
 	altoTablero(Alto),
 	Y >= Alto.
 
-% Clausula interfaz que computa la característica de tener fichas en las 4 posiciones centrales del tablero
+% Cláusula interfaz que computa la característica de tener fichas en las 4 posiciones centrales del tablero
 caracteristicaFichasEnCentro(Yo, CaracteristicaFichasCentro) :-
 	caracteristicaFichasEnCentro_impl(Yo, CaracteristicaFichasCentro1, 3, 3),
 	caracteristicaFichasEnCentro_impl(Yo, CaracteristicaFichasCentro2, 4, 3),

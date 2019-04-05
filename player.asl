@@ -5,7 +5,7 @@
 // corrección y tiempo de ejecución del algoritmo: más profundidad aumenta
 // la calidad de las jugadas, a costa de mayor tiempo de ejecución y consumo de
 // memoria
-profundidadArbolJuego(1). // En SWI-Prolog, estas mismas reglas se ejecutan en mucho menos tiempo que en Jason. Y Jason ni lo compensa con cortes verdes ;-(
+profundidadArbolJuego(1). // En SWI-Prolog 8.0.2, estas mismas reglas se ejecutan en mucho menos tiempo que en Jason. Y Jason ni lo compensa con cortes verdes ;-(
 
 // Las dimensiones del tablero
 anchoTablero(8).
@@ -130,14 +130,23 @@ minimax_impl_cacheado(Jugada, JugadaYHeuristica, Profundidad, Maximizar) :- mini
 // Eliminar datos guardados en caché que pudieran quedar
 borrar_minimax_impl_cacheado :- .abolish(minimax_impl_(_, _, _, _)).
 
-// Cláusula interfaz para generar las jugadas inmediatas a partir de una jugada que
+// Cláusulas interfaz para generar las jugadas inmediatas a partir de una jugada que
 // se considera ya hecha (aunque realmente no sea así)
+// Si alguien ha ganado, no hay más jugadas posibles
+generarJugadasInmediatas(JugadaHecha, [], _) :-
+	aplicarJugadaSoloSiNoAplicada(JugadaHecha) &
+	jugadorGano_cacheado(JugadaHecha, true, VictoriaMia) &
+	jugadorGano_cacheado(JugadaHecha, false, VictoriaRival) &
+	(VictoriaMia | VictoriaRival) &
+	deshacerJugadaSoloSiAplicada(JugadaHecha).
+// Si nadie gana, entonces generar jugadas
 generarJugadasInmediatas(JugadaHecha, JugadasGeneradas, MisJugadas) :-
-	aplicarJugada(JugadaHecha) &
-	.asserta(jugadaHecha(JugadaHecha)) & // Para que el predicado generarJugadasInmediatas_impl pueda descartar unificaciones alternativas
+	aplicarJugadaSoloSiNoAplicada(JugadaHecha) & // Por si la regla anterior falló y no se ha deshecho nada
+	jugadorGano_cacheado(JugadaHecha, true, VictoriaMia) &
+	jugadorGano_cacheado(JugadaHecha, false, VictoriaRival) &
+	not VictoriaMia & not VictoriaRival &
 	generarJugadasInmediatas_impl(JugadaHecha, 0, 0, difListas(JugadasGeneradas, []), MisJugadas) &
-	deshacerJugada(JugadaHecha) &
-	.abolish(jugadaHecha(JugadaHecha)).
+	deshacerJugadaSoloSiAplicada(JugadaHecha).
 // Si no hay un siguiente movimiento, no se pueden generar más jugadas, y por tanto
 // las nuevas jugadas generadas se corresponden con la lista vacía
 generarJugadasInmediatas_impl(JugadaHecha, SigX, SigY, difListas(JugadasGeneradas, JugadasGeneradas), MisJugadas) :-
@@ -183,6 +192,14 @@ aplicarMovimiento(movimiento(X, Y, SoyYoQuienHaceMov)) :-
 	.abolish(tablero(X, Y, 0)[source(percept)]) &
 	.asserta(tablero(X, Y, Id)[source(percept)]).
 
+// Aplica una jugada, solo si no se ha aplicado todavía, para evitar incongruencias.
+// En caso de que ya esté aplicada, devuelve verdadero igualmente
+aplicarJugadaSoloSiNoAplicada(Jugada) :-
+	not jugadaHecha(Jugada) &
+	aplicarJugada(Jugada) &
+	.asserta(jugadaHecha(Jugada)).
+aplicarJugadaSoloSiNoAplicada(Jugada) :- jugadaHecha(Jugada).
+
 // Sin jugada que deshacer, no hacer nada (caso base)
 deshacerJugada([]).
 // Deshacer cada uno de los movimientos
@@ -195,6 +212,14 @@ deshacerMovimiento(movimiento(X, Y, SoyYoQuienHaceMov)) :-
 	soyYoAIdentificadorJugador(SoyYoQuienHaceMov, Id) &
 	.abolish(tablero(X, Y, Id)[source(percept)]) &
 	.asserta(tablero(X, Y, 0)[source(percept)]).
+
+// Deshace una jugada, solo si ya se ha aplicado, para evitar incongruencias.
+// En caso de que no esté aplicada, devuelve verdadero igualmente
+deshacerJugadaSoloSiAplicada(Jugada) :-
+	jugadaHecha(Jugada) &
+	deshacerJugada(Jugada) &
+	.abolish(jugadaHecha(Jugada)).
+deshacerJugadaSoloSiAplicada(Jugada) :- not jugadaHecha(Jugada).
 
 // Predicados que obtiene la puntuación heurística del estado actual del tablero
 // Si yo he ganado, la heurística será la máxima
@@ -215,12 +240,13 @@ heuristica(Jugada, Valor) :-
 	heuristicaPonderadaLineal(Valor).
 
 // Calcula una puntuación heurística a partir de características del tablero que se consideran positivas (y negativas)
-heuristicaPonderadaLineal(10000 * CaracteristicaImpedirVictoria + 180 * CaracteristicaImpedirRaya3 + 200 * CaracteristicaRaya3 + 80 * CaracteristicaRaya2 + 100 * CaracteristicaImpedirRaya2) :-
+heuristicaPonderadaLineal(10000 * CaracteristicaImpedirVictoria + 360 * CaracteristicaImpedirRaya3 + 400 * CaracteristicaRaya3 + 36 * CaracteristicaRaya2 + 40 * CaracteristicaImpedirRaya2 + CaracteristicaFichasCentro) :-
 	caracteristicaImpedirRaya(CaracteristicaImpedirVictoria, 4) &
 	caracteristicaRaya(true, CaracteristicaRaya3, 3) &
 	caracteristicaImpedirRaya(CaracteristicaImpedirRaya3, 3) &
 	caracteristicaRaya(true, CaracteristicaRaya2, 2) &
-	caracteristicaImpedirRaya(CaracteristicaImpedirRaya2, 2).
+	caracteristicaImpedirRaya(CaracteristicaImpedirRaya2, 2) &
+	caracteristicaFichasEnCentro(true, CaracteristicaFichasCentro).
 
 // Cláusula interfaz que computa la característica de impedir la formación de una raya de N fichas del rival
 caracteristicaImpedirRaya(CaracteristicaImpedirRaya, Fichas) :- caracteristicaImpedirRaya_impl(CaracteristicaImpedirRaya, Fichas, 0, 0, 0).
@@ -271,6 +297,21 @@ caracteristicaRaya_impl(Yo, CaracteristicaRaya, Fichas, X, Y, Acumulador) :-
 caracteristicaRaya_impl(_, CaracteristicaRaya, _, _, Y, CaracteristicaRaya) :-
 	altoTablero(Alto) &
 	Y >= Alto.
+
+// Cláusula interfaz que computa la característica de tener fichas en las 4 posiciones centrales del tablero
+caracteristicaFichasEnCentro(Yo, CaracteristicaFichasCentro1 + CaracteristicaFichasCentro2 + CaracteristicaFichasCentro3 + CaracteristicaFichasCentro4) :-
+	caracteristicaFichasEnCentro_impl(Yo, CaracteristicaFichasCentro1, 3, 3) &
+	caracteristicaFichasEnCentro_impl(Yo, CaracteristicaFichasCentro2, 4, 3) &
+	caracteristicaFichasEnCentro_impl(Yo, CaracteristicaFichasCentro3, 3, 4) &
+	caracteristicaFichasEnCentro_impl(Yo, CaracteristicaFichasCentro4, 4, 4).
+// Si en la posición dada hay una ficha nuestra, la característica es favorable
+caracteristicaFichasEnCentro_impl(Yo, 1, X, Y) :-
+	soyYoAIdentificadorJugador(Yo, Id) &
+	tablero(X, Y, Id).
+// Si en la posición dada no hay una ficha, o no es nuestra, la característica es desfavorable
+caracteristicaFichasEnCentro_impl(Yo, 0, X, Y) :-
+	soyYoAIdentificadorJugador(Yo, MiId) &
+	tablero(X, Y, Id) & Id \== MiId.
 
 // Si ya hemos computado el resultado de jugadorGano para la jugada actual, reusarlo. En caso contrario, computarlo una vez
 // por jugada
