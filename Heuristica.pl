@@ -15,8 +15,6 @@
 
 % Predicados que obtiene la puntuación heurística del estado actual del tablero
 % Si yo he ganado, la heurística será la máxima
-% TODO: hacer que minimax no siga generando nodos hoja tras un estado terminal (victoria de algún jugador).
-% Si no se hace, la heurística tendrá que distinguir cuándo ha ganado quién para las siguientes reglas
 heuristica(Jugada, Valor) :-
 	jugadorGano_cacheado(Jugada, true, ValorVerdadGanado),
 	ValorVerdadGanado,
@@ -40,7 +38,8 @@ heuristicaPonderadaLineal(Valor) :-
 	caracteristicaImpedirRaya(CaracteristicaImpedirRaya3, 3),
 	caracteristicaRaya(true, CaracteristicaRaya2, 2),
 	caracteristicaImpedirRaya(CaracteristicaImpedirRaya2, 2),
-	Valor is 1000 * CaracteristicaImpedirVictoria + 180 * CaracteristicaRaya3 + 200 * CaracteristicaImpedirRaya3 + 18 * CaracteristicaRaya2 + 20 * CaracteristicaImpedirRaya2.
+	caracteristicaFichasEnCentro(true, CaracteristicaFichasCentro),
+	Valor is 2000 * CaracteristicaImpedirVictoria + 360 * CaracteristicaRaya3 + 400 * CaracteristicaImpedirRaya3 + 36 * CaracteristicaRaya2 + 40 * CaracteristicaImpedirRaya2 + CaracteristicaFichasCentro.
 
 % Cláusula interfaz que computa la característica de impedir la formación de una raya de N fichas del rival
 caracteristicaImpedirRaya(CaracteristicaImpedirRaya, Fichas) :- caracteristicaImpedirRaya_impl(CaracteristicaImpedirRaya, Fichas, 0, 0, 0).
@@ -99,6 +98,22 @@ caracteristicaRaya_impl(Yo, CaracteristicaRaya, Fichas, X, Y, Acumulador) :-
 caracteristicaRaya_impl(_, CaracteristicaRaya, _, _, Y, CaracteristicaRaya) :-
 	altoTablero(Alto),
 	Y >= Alto.
+
+% Clausula interfaz que computa la característica de tener fichas en las 4 posiciones centrales del tablero
+caracteristicaFichasEnCentro(Yo, CaracteristicaFichasCentro) :-
+	caracteristicaFichasEnCentro_impl(Yo, CaracteristicaFichasCentro1, 3, 3),
+	caracteristicaFichasEnCentro_impl(Yo, CaracteristicaFichasCentro2, 4, 3),
+	caracteristicaFichasEnCentro_impl(Yo, CaracteristicaFichasCentro3, 3, 4),
+	caracteristicaFichasEnCentro_impl(Yo, CaracteristicaFichasCentro4, 4, 4),
+	CaracteristicaFichasCentro is CaracteristicaFichasCentro1 + CaracteristicaFichasCentro2 + CaracteristicaFichasCentro3 + CaracteristicaFichasCentro4.
+% Si en la posición dada hay una ficha nuestra, la característica es favorable
+caracteristicaFichasEnCentro_impl(Yo, 1, X, Y) :-
+	soyYoAIdentificadorJugador(Yo, Id),
+	tablero(X, Y, Id).
+% Si en la posición dada no hay una ficha, o no es nuestra, la característica es desfavorable
+caracteristicaFichasEnCentro_impl(Yo, 0, X, Y) :-
+	soyYoAIdentificadorJugador(Yo, MiId),
+	tablero(X, Y, Id), Id \= MiId.
 
 % Si ya hemos computado el resultado de jugadorGano para la jugada actual, reusarlo. En caso contrario, computarlo una vez
 % por jugada
