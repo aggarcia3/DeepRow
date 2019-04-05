@@ -208,14 +208,23 @@ minimax_impl_cacheado(Jugada, JugadaYHeuristica, Profundidad, Maximizar) :- mini
 % Eliminar datos guardados en caché que pudieran quedar
 borrar_minimax_impl_cacheado :- retractall(minimax_impl_(_, _, _, _)).
 
-% Cláusula interfaz para generar las jugadas inmediatas a partir de una jugada que
+% Cláusulas interfaz para generar las jugadas inmediatas a partir de una jugada que
 % se considera ya hecha (aunque realmente no sea así)
+% Si alguien ha ganado, no hay más jugadas posibles
+generarJugadasInmediatas(JugadaHecha, [], _) :-
+	aplicarJugadaSoloSiNoAplicada(JugadaHecha),
+	jugadorGano_cacheado(JugadaHecha, true, VictoriaMia),
+	jugadorGano_cacheado(JugadaHecha, false, VictoriaRival),
+	(VictoriaMia; VictoriaRival),
+	deshacerJugadaSoloSiAplicada(JugadaHecha).
+% Si nadie gana, entonces generar jugadas
 generarJugadasInmediatas(JugadaHecha, JugadasGeneradas, MisJugadas) :-
-	aplicarJugada(JugadaHecha),
-	asserta(jugadaHecha(JugadaHecha)), % Para que el predicado generarJugadasInmediatas_impl pueda descartar unificaciones alternativas (es curioso que tenga que estar haciendo esto en lugar de haber usado un corte, que es más eficiente, pero por razones filosóficas no está en AS)
+	aplicarJugadaSoloSiNoAplicada(JugadaHecha), % Por si la regla anterior falló y no se ha deshecho nada
+	jugadorGano_cacheado(JugadaHecha, true, VictoriaMia),
+	jugadorGano_cacheado(JugadaHecha, false, VictoriaRival),
+	not(VictoriaMia), not(VictoriaRival),
 	generarJugadasInmediatas_impl(JugadaHecha, 0, 0, difListas(JugadasGeneradas, []), MisJugadas),
-	deshacerJugada(JugadaHecha),
-	retract(jugadaHecha(JugadaHecha)).
+	deshacerJugadaSoloSiAplicada(JugadaHecha).
 % Si no hay un siguiente movimiento, o alguien ha ganado, no se pueden generar más jugadas, y por tanto
 % las nuevas jugadas generadas se corresponden con la lista vacía
 generarJugadasInmediatas_impl(JugadaHecha, SigX, SigY, difListas(JugadasGeneradas, JugadasGeneradas), MisJugadas) :-
@@ -265,6 +274,15 @@ aplicarMovimiento(movimiento(X, Y, SoyYoQuienHaceMov)) :-
 	retract(tablero(X, Y, 0)), % abolish en Jason
 	asserta(tablero(X, Y, Id)).
 
+:- dynamic jugadaHecha/1.
+% Aplica una jugada, solo si no se ha aplicado todavía, para evitar incongruencias.
+% En caso de que ya esté aplicada, devuelve verdadero igualmente
+aplicarJugadaSoloSiNoAplicada(Jugada) :-
+	not(jugadaHecha(Jugada)),
+	aplicarJugada(Jugada),
+	asserta(jugadaHecha(Jugada)).
+aplicarJugadaSoloSiNoAplicada(Jugada) :- jugadaHecha(Jugada).
+
 % Sin jugada que deshacer, no hacer nada (caso base)
 deshacerJugada([]).
 % Deshacer cada uno de los movimientos
@@ -277,6 +295,14 @@ deshacerMovimiento(movimiento(X, Y, SoyYoQuienHaceMov)) :-
 	soyYoAIdentificadorJugador(SoyYoQuienHaceMov, Id),
 	retract(tablero(X, Y, Id)), % abolish en Jason
 	asserta(tablero(X, Y, 0)).
+
+% Deshace una jugada, solo si ya se ha aplicado, para evitar incongruencias.
+% En caso de que no esté aplicada, devuelve verdadero igualmente
+deshacerJugadaSoloSiAplicada(Jugada) :-
+	jugadaHecha(Jugada),
+	deshacerJugada(Jugada),
+	retract(jugadaHecha(Jugada)).
+deshacerJugadaSoloSiAplicada(Jugada) :- not(jugadaHecha(Jugada)).
 
 % Concatena dos listas expresadas como diferencias de listas.
 % Esta operación es de complejidad O(1)
