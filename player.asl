@@ -5,7 +5,8 @@
 // corrección y tiempo de ejecución del algoritmo: más profundidad aumenta
 // la calidad de las jugadas, a costa de mayor tiempo de ejecución y consumo de
 // memoria
-profundidadArbolJuego(1). // En SWI-Prolog 8.0.2, estas mismas reglas se ejecutan en mucho menos tiempo que en Jason. Y Jason ni lo compensa con cortes verdes ;-(
+profundidadArbolJuego(1). // En SWI-Prolog 8.0.2, estas mismas reglas se ejecutan en mucho menos tiempo que en Jason.
+                          // Y Jason ni lo compensa con cortes verdes ;-(
 
 // Las dimensiones del tablero
 anchoTablero(8).
@@ -24,54 +25,58 @@ mejorSiguienteCasilla(X, Y) :- minimax([[movimiento(X, Y, _)], _]).
 peorSiguienteCasilla(X, Y) :- maximin([[movimiento(X, Y, _)], _]).
 
 // Cláusula interfaz para obtener la jugada óptima a realizar, con su heurística asociada
-minimax(JugadaYHeuristica) :-
+minimax([Jugada, Heuristica]) :-
 	profundidadArbolJuego(P) &
-	minimax_impl([], JugadaYHeuristica, P, true) &
+	minimax_impl([], [_, Heuristica], P, true) &
+	mejorJugadaEnRespuestaAJugada([], Jugada) &
 	// Borra datos en caché para partir de un estado limpio
 	borrar_generarJugadasInmediatas_cacheado &
 	borrar_jugadorGano_cacheado &
-	borrar_minimax_impl_cacheado.
+	.abolish(mejorJugadaEnRespuestaAJugada(_, _)).
 // Cláusula interfaz para obtener la jugada óptima a realizar para perder el juego, con su heurística asociada
-maximin(JugadaYHeuristica) :-
+maximin([Jugada, Heuristica]) :-
 	profundidadArbolJuego(P) &
 	.asserta(haciendoMaximin) & // Para que no se tenga en cuenta la inversión del jugador que maximiza para generar jugadas
-	minimax_impl([], JugadaYHeuristica, P, false) &
+	minimax_impl([], [_, Heuristica], P, false) &
+	mejorJugadaEnRespuestaAJugada([], Jugada) &
 	.abolish(haciendoMaximin) &
 	// Borra datos en caché para partir de un estado limpio
 	borrar_generarJugadasInmediatas_cacheado &
 	borrar_jugadorGano_cacheado &
-	borrar_minimax_impl_cacheado.
+	.abolish(mejorJugadaEnRespuestaAJugada(_, _)).
 // Si la profundidad restante es cero, no generar hijos para este nodo,
 // y considerar la heurística del nodo como la heurística de la jugada que representa
 // (caso base)
 minimax_impl(JugadaActual, [JugadaActual, Heuristica], 0, _) :-
-	aplicarJugada(JugadaActual) &
+	aplicarJugadaSoloSiNoAplicada(JugadaActual) &
 	heuristica(JugadaActual, Heuristica) &
-	deshacerJugada(JugadaActual).
+	deshacerJugadaSoloSiAplicada(JugadaActual).
 // Si la profundidad restante no es cero, generar hijos para este nodo del árbol
 // y considerar la heurística del nodo como la heurística máxima o mínima de las jugadas
 // hijas
-minimax_impl(JugadaActual, [JugadaOptima, Heuristica], Profundidad, Maximizar) :- // true -> maximizar, mis jugadas; false -> minimizar, jugadas del oponente
+minimax_impl(JugadaActual, [JugadaActual, Heuristica], Profundidad, Maximizar) :- // true -> maximizar, mis jugadas; false -> minimizar, jugadas del oponente
 	Profundidad > 0 & // Para no unificar con lo que debe atenderse por la primera regla
 	misJugadasTeniendoCuentaMaximin(Maximizar, MisJugadas) &
 	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas) & // Para reducir el tiempo de ejecución empleado por el backtracking
 	Jugadas \== [] &
 	negar(Maximizar, NuevoMaximizar) &
-	minimaxVariasJugadas(Jugadas, Profundidad - 1, NuevoMaximizar, JugadaOptima, Heuristica).
+	minimaxVariasJugadas(Jugadas, JugadasYHeuristicas, Profundidad - 1, NuevoMaximizar) &
+	heuristicaOptima(JugadasYHeuristicas, JugadaOptima, Heuristica, Maximizar) &
+	.asserta(mejorJugadaEnRespuestaAJugada(JugadaActual, JugadaOptima)).
 // Los nodos sin más jugadas posibles son terminales, y su heurística se calcula directamente
 minimax_impl(JugadaActual, [JugadaActual, Heuristica], Profundidad, Maximizar) :-
 	Profundidad > 0 & // Para no unificar con lo que debe atenderse por la primera regla
 	misJugadasTeniendoCuentaMaximin(Maximizar, MisJugadas) &
 	generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas) & // Para reducir el tiempo de ejecución empleado por el backtracking
 	Jugadas = [] &
-	aplicarJugada(JugadaActual) &
+	aplicarJugadaSoloSiNoAplicada(JugadaActual) &
 	heuristica(JugadaActual, Heuristica) &
-	deshacerJugada(JugadaActual).
+	deshacerJugadaSoloSiAplicada(JugadaActual).
 
-// Devuelve el valor apropiado de MiJugada para la generación de jugadas, teniendo en cuenta si se está ejecutando minimax o bien maximin.
-// Esencialmente, estas cláusulas hacen que resultado = MiJugada XOR haciendoMaximin.
-misJugadasTeniendoCuentaMaximin(MiJugada, true) :- (not MiJugada & haciendoMaximin) | (MiJugada & not haciendoMaximin).
-misJugadasTeniendoCuentaMaximin(MiJugada, false) :- (not MiJugada & not haciendoMaximin) | (MiJugada & haciendoMaximin).
+// Devuelve el valor apropiado de MisJugadas para la generación de jugadas, teniendo en cuenta si se está ejecutando minimax o bien maximin.
+// Esencialmente, estas cláusulas hacen que resultado = MisJugadas XOR haciendoMaximin.
+misJugadasTeniendoCuentaMaximin(MisJugadas, true) :- (not MisJugadas & haciendoMaximin) | (MisJugadas & not haciendoMaximin).
+misJugadasTeniendoCuentaMaximin(MisJugadas, false) :- (not MisJugadas & not haciendoMaximin) | (MisJugadas & haciendoMaximin).
 
 // Si no hemos computado ya el resultado de generarJugadasInmediatas sobre los argumentos dados, hacerlo y guardarlo para reusarlo
 generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas) :-
@@ -83,52 +88,33 @@ generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas) :- generarJ
 // Eliminar datos guardados en caché que pudieran quedar
 borrar_generarJugadasInmediatas_cacheado :- .abolish(generarJugadasInmediatas_(_, _, _)).
 
-// Cláusula interfaz para calcular la jugada más óptima según minimax para el nivel de profundidad actual
-minimaxVariasJugadas(Jugadas, Profundidad, Maximizar, JugadaOptima, Heuristica) :-
+// Si no tenemos jugadas a las que aplicar minimax, no hacerlo (caso base)
+minimaxVariasJugadas([], [], _, _).
+// Mientras queden jugadas a las que aplicar minimax, guardar los resultados de
+// minimax en una lista
+minimaxVariasJugadas([Jugada|Cdr], [[Jugada, Heuristica]|JugadasYHeuristicas], Profundidad, Maximizar) :-
+	minimax_impl(Jugada, [Jugada, Heuristica], Profundidad, Maximizar) &
+	minimaxVariasJugadas(Cdr, JugadasYHeuristicas, Profundidad, Maximizar).
+
+// Cláusula interfaz para obtener la jugada que optimiza su valor de heurística
+heuristicaOptima(JugadasYHeuristicas, JugadaOptima, HeuristicaOptima, Maximizar) :-
 	heuristicaVictoria(MaxHeuristica) &
 	heuristicaDerrota(MinHeuristica) &
-	valorOptimo(MinHeuristica - 1, MaxHeuristica + 1, Maximizar, HeuristicaComp) & // Maximizar = true -> HeuristicaComp = MaxHeuristica
-	minimaxVariasJugadas_impl(Jugadas, Profundidad, Maximizar, JugadaOptima, Heuristica, _, HeuristicaComp).
-// Si solo nos queda una jugada a la que aplicar minimax, finalizar la recursividad según sea una nueva óptima o no.
-// Establecemos el caso base en la lista de un elemento para evitar incongruencias en el backtracking de siguientes soluciones,
-// y fallar directamente si nos pasan una lista de jugadas vacía, cosa que no debería de ocurrir
-minimaxVariasJugadas_impl([Jugada|Cdr], Profundidad, Maximizar, Jugada, HeuristicaActual, _, HeuristicaActual) :-
-	Cdr = [] &
-	negar(Maximizar, MaximizarAnterior) &
-	minimax_impl_cacheado(Jugada, [_, HeuristicaComp], Profundidad, Maximizar) &
-	valorOptimo(HeuristicaComp, HeuristicaActual, MaximizarAnterior, HeuristicaOptimaActual) &
-	HeuristicaOptimaActual \== HeuristicaActual. // Nueva jugada óptima
-minimaxVariasJugadas_impl([Jugada|Cdr], Profundidad, Maximizar, JugadaOptimaActual, HeuristicaActual, JugadaOptimaActual, HeuristicaActual) :-
-	Cdr = [] &
-	negar(Maximizar, MaximizarAnterior) &
-	minimax_impl_cacheado(Jugada, [_, HeuristicaComp], Profundidad, Maximizar) &
-	valorOptimo(HeuristicaComp, HeuristicaActual, MaximizarAnterior, HeuristicaOptimaActual) &
-	HeuristicaOptimaActual = HeuristicaActual. // No es nueva jugada óptima
-// Mientras quede más de una jugada a la que aplicar minimax, hacerlo
-minimaxVariasJugadas_impl([Jugada|Cdr], Profundidad, Maximizar, JugadaOptima, Heuristica, _, HeuristicaActual) :-
-	Cdr \== [] &
-	negar(Maximizar, MaximizarAnterior) &
-	minimax_impl_cacheado(Jugada, [_, HeuristicaComp], Profundidad, Maximizar) &
-	valorOptimo(HeuristicaComp, HeuristicaActual, MaximizarAnterior, HeuristicaOptimaActual) &
-	HeuristicaOptimaActual \== HeuristicaActual & // Nueva jugada óptima
-	minimaxVariasJugadas_impl(Cdr, Profundidad, Maximizar, JugadaOptima, Heuristica, Jugada, HeuristicaComp).
-minimaxVariasJugadas_impl([Jugada|Cdr], Profundidad, Maximizar, JugadaOptima, Heuristica, JugadaOptimaActual, HeuristicaActual) :-
-	Cdr \== [] &
-	negar(Maximizar, MaximizarAnterior) &
-	minimax_impl_cacheado(Jugada, [_, HeuristicaComp], Profundidad, Maximizar) &
-	valorOptimo(HeuristicaComp, HeuristicaActual, MaximizarAnterior, HeuristicaOptimaActual) &
-	HeuristicaOptimaActual = HeuristicaActual & // No es nueva jugada óptima
-	minimaxVariasJugadas_impl(Cdr, Profundidad, Maximizar, JugadaOptima, Heuristica, JugadaOptimaActual, HeuristicaActual).
-
-// Si no hemos computado ya el resultado de minimax_impl sobre los argumentos dados, hacerlo y guardarlo para reusarlo
-minimax_impl_cacheado(Jugada, JugadaYHeuristica, Profundidad, Maximizar) :-
-	not minimax_impl_(Jugada, JugadaYHeuristica, Profundidad, Maximizar) &
-	minimax_impl(Jugada, JugadaYHeuristica, Profundidad, Maximizar) &
-	.assertz(minimax_impl_(Jugada, JugadaYHeuristica, Profundidad, Maximizar)).
-// Si ya tenemos el resultado en caché, sacarlo directamente de ahí, para no tener que volver a repetir los cálculos
-minimax_impl_cacheado(Jugada, JugadaYHeuristica, Profundidad, Maximizar) :- minimax_impl_(Jugada, JugadaYHeuristica, Profundidad, Maximizar).
-// Eliminar datos guardados en caché que pudieran quedar
-borrar_minimax_impl_cacheado :- .abolish(minimax_impl_(_, _, _, _)).
+	negar(Maximizar, MaximizarProc) &
+	valorOptimo(MinHeuristica - 1, MaxHeuristica + 1, MaximizarProc, HeuristicaComp) & // Maximizar = true -> HeuristicaComp = MaxHeuristica
+	heuristicaOptima_impl(JugadasYHeuristicas, JugadaOptima, HeuristicaOptima, Maximizar, _, HeuristicaComp).
+// Si no hay más hijos que recorrer, la heurística optimizada final es la actual
+heuristicaOptima_impl([], JugadaOptimaActual, HeuristicaOptimaActual, _, JugadaOptimaActual, HeuristicaOptimaActual).
+// Si la heurística actual es una nueva óptima, entonces la nueva óptima actual debería de ser la actual
+heuristicaOptima_impl([[JugadaActual, HeuristicaActual]|Cdr], JugadaOptima, HeuristicaOptima, Maximizar, _, HeuristicaOptimaActual) :-
+	valorOptimo(HeuristicaActual, HeuristicaOptimaActual, Maximizar, HeuristicaComp) &
+	HeuristicaOptimaActual \== HeuristicaComp &
+	heuristicaOptima_impl(Cdr, JugadaOptima, HeuristicaOptima, Maximizar, JugadaActual, HeuristicaActual).
+// Si la heurística actual no es una nueva óptima, entonces la nueva óptima actual debe de seguir como está
+heuristicaOptima_impl([[_, HeuristicaActual]|Cdr], JugadaOptima, HeuristicaOptima, Maximizar, JugadaOptimaActual, HeuristicaOptimaActual) :-
+	valorOptimo(HeuristicaActual, HeuristicaOptimaActual, Maximizar, HeuristicaComp) &
+	HeuristicaOptimaActual = HeuristicaComp &
+	heuristicaOptima_impl(Cdr, JugadaOptima, HeuristicaOptima, Maximizar, JugadaOptimaActual, HeuristicaOptimaActual).
 
 // Cláusulas interfaz para generar las jugadas inmediatas a partir de una jugada que
 // se considera ya hecha (aunque realmente no sea así)
@@ -226,21 +212,26 @@ deshacerJugadaSoloSiAplicada(Jugada) :- not jugadaHecha(Jugada).
 heuristica(Jugada, Valor) :-
 	jugadorGano_cacheado(Jugada, true, ValorVerdadGanado) &
 	ValorVerdadGanado &
-	heuristicaVictoria(Valor).
+	heuristicaVictoria(Valor)/* &
+	.print(Jugada, ": ", Valor)*/.
 // Si el contrincante ha ganado, la heurística será la mínima
 heuristica(Jugada, Valor) :-
 	jugadorGano_cacheado(Jugada, false, ValorVerdadPerdido) &
 	ValorVerdadPerdido &
-	heuristicaDerrota(Valor).
+	heuristicaDerrota(Valor)/* &
+	.print(Jugada, ": ", Valor)*/.
 // En otro caso (nadie ha ganado), la heurística se calculará en base a una función ponderada lineal
 heuristica(Jugada, Valor) :-
 	jugadorGano_cacheado(Jugada, true, ValorVerdadGanado) &
 	jugadorGano_cacheado(Jugada, false, ValorVerdadPerdido) &
 	not ValorVerdadGanado & not ValorVerdadPerdido &
-	heuristicaPonderadaLineal(Valor).
+	heuristicaPonderadaLineal(Valor)/* &
+	.print(Jugada, ": ", Valor)*/.
+// Para depuración de minimax
+//heuristica(Jugada, Valor) :- .random(Valor) & .print(Jugada, ": ", Valor).
 
 // Calcula una puntuación heurística a partir de características del tablero que se consideran positivas (y negativas)
-heuristicaPonderadaLineal(10000 * CaracteristicaImpedirVictoria + 360 * CaracteristicaImpedirRaya3 + 400 * CaracteristicaRaya3 + 36 * CaracteristicaRaya2 + 40 * CaracteristicaImpedirRaya2 + CaracteristicaFichasCentro) :-
+heuristicaPonderadaLineal(2000 * CaracteristicaImpedirVictoria + 6 * CaracteristicaRaya3 + 5 * CaracteristicaImpedirRaya3 + 4 * CaracteristicaRaya2 + 3 * CaracteristicaImpedirRaya2 + CaracteristicaFichasCentro) :-
 	caracteristicaImpedirRaya(CaracteristicaImpedirVictoria, 4) &
 	caracteristicaRaya(true, CaracteristicaRaya3, 3) &
 	caracteristicaImpedirRaya(CaracteristicaImpedirRaya3, 3) &
@@ -447,7 +438,7 @@ soyYoAIdentificadorJugador(false, 1 + (MiId mod 2)) :- soyYoAIdentificadorJugado
 
 // Al ser nuestro turno según el entorno, hacer el mejor movimiento
 +turno(Yo)[source(percept)] : .my_name(Yo) <-
-	.wait(1000); // Por si estamos recibiendo todavía percepciones del tablero
+	.wait(750); // Por si estamos recibiendo todavía percepciones del tablero
 
 	// Dependiendo de la estrategia a emplear, escoger el mejor o peor movimiento
 	// (desde nuestro punto de vista)
