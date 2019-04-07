@@ -36,10 +36,10 @@ minimax([Jugada, Heuristica]) :-
 // Cláusula interfaz para obtener la jugada óptima a realizar para perder el juego, con su heurística asociada
 maximin([Jugada, Heuristica]) :-
 	profundidadArbolJuego(P) &
-	.asserta(haciendoMaximin) & // Para que no se tenga en cuenta la inversión del jugador que maximiza para generar jugadas
+	.asserta(haciendoMaximin(true)) & // Para que no se tenga en cuenta la inversión del jugador que maximiza para generar jugadas
 	minimax_impl([], [_, Heuristica], P, false) &
 	mejorJugadaEnRespuestaAJugada([], Jugada) &
-	.abolish(haciendoMaximin) &
+	.abolish(haciendoMaximin(true)) &
 	// Borra datos en caché para partir de un estado limpio
 	borrar_generarJugadasInmediatas_cacheado &
 	borrar_jugadorGano_cacheado &
@@ -75,8 +75,8 @@ minimax_impl(JugadaActual, [JugadaActual, Heuristica], Profundidad, Maximizar) :
 
 // Devuelve el valor apropiado de MisJugadas para la generación de jugadas, teniendo en cuenta si se está ejecutando minimax o bien maximin.
 // Esencialmente, estas cláusulas hacen que resultado = MisJugadas XOR haciendoMaximin.
-misJugadasTeniendoCuentaMaximin(MisJugadas, true) :- (not MisJugadas & haciendoMaximin) | (MisJugadas & not haciendoMaximin).
-misJugadasTeniendoCuentaMaximin(MisJugadas, false) :- (not MisJugadas & not haciendoMaximin) | (MisJugadas & haciendoMaximin).
+misJugadasTeniendoCuentaMaximin(MisJugadas, true) :- (not MisJugadas & haciendoMaximin(true)) | (MisJugadas & not haciendoMaximin(true)).
+misJugadasTeniendoCuentaMaximin(MisJugadas, false) :- (not MisJugadas & not haciendoMaximin(true)) | (MisJugadas & haciendoMaximin(true)).
 
 // Si no hemos computado ya el resultado de generarJugadasInmediatas sobre los argumentos dados, hacerlo y guardarlo para reusarlo
 generarJugadasInmediatas_cacheado(JugadaActual, Jugadas, MisJugadas) :-
@@ -231,12 +231,14 @@ heuristica(Jugada, Valor) :-
 //heuristica(Jugada, Valor) :- .random(Valor) & .print(Jugada, ": ", Valor).
 
 // Calcula una puntuación heurística a partir de características del tablero que se consideran positivas (y negativas)
-heuristicaPonderadaLineal(2000 * CaracteristicaImpedirVictoria + 6 * CaracteristicaRaya3 + 5 * CaracteristicaImpedirRaya3 + 4 * CaracteristicaRaya2 + 3 * CaracteristicaImpedirRaya2 + CaracteristicaFichasCentro) :-
+heuristicaPonderadaLineal(2000 * CaracteristicaImpedirVictoria + 6 * CaracteristicaRaya3Mia + 6 * CaracteristicaImpedirRaya3 - 7 * CaracteristicaRaya3Rival + 4 * CaracteristicaRaya2Mia + 4 * CaracteristicaImpedirRaya2 - 5 * CaracteristicaRaya2Rival + CaracteristicaFichasCentro) :-
 	caracteristicaImpedirRaya(CaracteristicaImpedirVictoria, 4) &
-	caracteristicaRaya(true, CaracteristicaRaya3, 3) &
+	caracteristicaRaya(true, CaracteristicaRaya3Mia, 3) &
 	caracteristicaImpedirRaya(CaracteristicaImpedirRaya3, 3) &
-	caracteristicaRaya(true, CaracteristicaRaya2, 2) &
+	caracteristicaRaya(false, CaracteristicaRaya3Rival, 3) &
 	caracteristicaImpedirRaya(CaracteristicaImpedirRaya2, 2) &
+	caracteristicaRaya(true, CaracteristicaRaya2Mia, 2) &
+	caracteristicaRaya(false, CaracteristicaRaya2Rival, 2) &
 	caracteristicaFichasEnCentro(true, CaracteristicaFichasCentro).
 
 // Cláusula interfaz que computa la característica de impedir la formación de una raya de N fichas del rival
@@ -427,10 +429,6 @@ soyYoAIdentificadorJugador(true, Id) :-
 	.delete("player", Yo, IdStr) &
 	.term2string(Id, IdStr).
 soyYoAIdentificadorJugador(false, 1 + (MiId mod 2)) :- soyYoAIdentificadorJugador(true, MiId).
-
-/* Objetivos iniciales */
-
-/* Planes */
 
 /* Eventos de BC */
 +estrategia(Estrategia)[source(percept)] : Estrategia = jugarAGanar | Estrategia = jugarAPerder.

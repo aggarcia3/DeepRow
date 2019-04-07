@@ -34,12 +34,14 @@ heuristica(Jugada, Valor) :-
 % Calcula una puntuación heurística a partir de características del tablero que se consideran positivas (y negativas)
 heuristicaPonderadaLineal(Valor) :-
 	caracteristicaImpedirRaya(CaracteristicaImpedirVictoria, 4),
-	caracteristicaRaya(true, CaracteristicaRaya3, 3),
+	caracteristicaRaya(true, CaracteristicaRaya3Mia, 3),
 	caracteristicaImpedirRaya(CaracteristicaImpedirRaya3, 3),
-	caracteristicaRaya(true, CaracteristicaRaya2, 2),
+	caracteristicaRaya(false, CaracteristicaRaya3Rival, 3),
 	caracteristicaImpedirRaya(CaracteristicaImpedirRaya2, 2),
-	caracteristicaFichasEnCentro(true, CaracteristicaFichasCentro),
-	Valor is 2000 * CaracteristicaImpedirVictoria + 5 * CaracteristicaRaya3 + 5 * CaracteristicaImpedirRaya3 + 4 * CaracteristicaRaya2 + 4 * CaracteristicaImpedirRaya2 + CaracteristicaFichasCentro.
+	caracteristicaRaya(true, CaracteristicaRaya2Mia, 2),
+	caracteristicaRaya(false, CaracteristicaRaya2Rival, 2),
+	caracteristicaFichasEnCentro(true, CaracteristicaFichasCentro).
+	Valor is 2000 * CaracteristicaImpedirVictoria + 6 * CaracteristicaRaya3Mia + 6 * CaracteristicaImpedirRaya3 - 7 * CaracteristicaRaya3Rival + 4 * CaracteristicaRaya2Mia + 4 * CaracteristicaImpedirRaya2 - 5 * CaracteristicaRaya2Rival + CaracteristicaFichasCentro.
 
 % Cláusula interfaz que computa la característica de impedir la formación de una raya de N fichas del rival
 caracteristicaImpedirRaya(CaracteristicaImpedirRaya, Fichas) :- caracteristicaImpedirRaya_impl(CaracteristicaImpedirRaya, Fichas, 0, 0, 0).
