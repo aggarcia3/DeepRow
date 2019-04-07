@@ -437,6 +437,8 @@ soyYoAIdentificadorJugador(false, 1 + (MiId mod 2)) :- soyYoAIdentificadorJugado
 // Al ser nuestro turno según el entorno, hacer el mejor movimiento
 +turno(Yo)[source(percept)] : .my_name(Yo) <-
 	.wait(750); // Por si estamos recibiendo todavía percepciones del tablero
+	
+	.print("Deliberando movimiento... Por favor, espera.");
 
 	// Dependiendo de la estrategia a emplear, escoger el mejor o peor movimiento
 	// (desde nuestro punto de vista)
