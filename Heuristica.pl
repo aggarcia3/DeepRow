@@ -40,7 +40,7 @@ heuristicaPonderadaLineal(Valor) :-
 	caracteristicaImpedirRaya(CaracteristicaImpedirRaya2, 2),
 	caracteristicaRaya(true, CaracteristicaRaya2Mia, 2),
 	caracteristicaRaya(false, CaracteristicaRaya2Rival, 2),
-	caracteristicaFichasEnCentro(true, CaracteristicaFichasCentro).
+	caracteristicaFichasEnCentro(true, CaracteristicaFichasCentro),
 	Valor is 2000 * CaracteristicaImpedirVictoria + 6 * CaracteristicaRaya3Mia + 6 * CaracteristicaImpedirRaya3 - 7 * CaracteristicaRaya3Rival + 4 * CaracteristicaRaya2Mia + 4 * CaracteristicaImpedirRaya2 - 5 * CaracteristicaRaya2Rival + CaracteristicaFichasCentro.
 
 % Cláusula interfaz que computa la característica de impedir la formación de una raya de N fichas del rival
